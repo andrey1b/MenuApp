@@ -1,0 +1,27 @@
+{
+  "prices": [
+    { "name": "Хлеб", "price": 61.40, "unit": "кг", "frequency": "ежедневно" },
+    { "name": "Батон", "price": 31.00, "unit": "500 г", "frequency": "ежедневно" },
+    { "name": "Макароны", "price": 37.00, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Мука", "price": 22.00, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Гречка", "price": 50.18, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Рис", "price": 51.74, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Говядина", "price": 361.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Свинина", "price": 225.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Курица", "price": 106.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Филе куриное", "price": 209.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Рыба мороженая", "price": 228.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Молоко", "price": 50.46, "unit": "л", "frequency": "ежедневно" },
+    { "name": "Сыр", "price": 238.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Сметана", "price": 144.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Яйца", "price": 68.33, "unit": "десяток", "frequency": "еженедельно" },
+    { "name": "Масло сливочное", "price": 110.06, "unit": "200 г", "frequency": "еженедельно" },
+    { "name": "Масло подсолнечное", "price": 89.00, "unit": "л", "frequency": "ежемесячно" },
+    { "name": "Картофель", "price": 17.48, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Капуста", "price": 11.00, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Лук", "price": 10.00, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Морковь", "price": 13.00, "unit": "кг", "frequency": "ежемесячно" },
+    { "name": "Яблоки", "price": 43.00, "unit": "кг", "frequency": "еженедельно" },
+    { "name": "Чеснок", "price": 120.00, "unit": "кг", "frequency": "ежемесячно" }
+  ]
+}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DailyMenuApp.cs" />
+    <Compile Remove="Tab.cs" />
+    <Compile Remove="UpdatePrices.cs" />
+    <Compile Remove="UpdatePricesExcel.cs" />
+    <Compile Remove="Excel Products.cs" />
+    <Compile Remove="ProductsTab.cs" />
+    <Compile Remove="Входные данные.cs" />
+    <Compile Remove="using System%3B.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+    <PackageReference Include="ClosedXML" Version="0.102.3" />
+  </ItemGroup>
+
+</Project>
