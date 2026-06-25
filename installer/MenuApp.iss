@@ -1,7 +1,7 @@
 #define AppName    "Меню питания семьи"
 #define AppVersion "1.0.0"
 #define AppExeName "MenuApp.exe"
-#define AppSourceDir "..\..\..\Дистрибутив v1.0.0\app"
+#define AppSourceDir "..\..\Дистрибутив v1.0.0\app"
 #define OutputDir  "..\..\setup_output"
 
 [Setup]
@@ -25,7 +25,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "{#AppSourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
