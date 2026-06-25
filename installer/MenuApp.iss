@@ -1,7 +1,7 @@
 #define AppName    "Меню питания семьи"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 #define AppExeName "MenuApp.exe"
-#define AppSourceDir "..\..\Дистрибутив v1.0.0\app"
+#define AppSourceDir "..\..\Дистрибутив v1.0.1\app"
 #define OutputDir  "..\..\setup_output"
 
 [Setup]
@@ -24,16 +24,13 @@ ArchitecturesInstallIn64BitMode=x64compatible
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-
 [Files]
 Source: "{#AppSourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}";                       Filename: "{app}\{#AppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}";                 Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}";                 Filename: "{app}\{#AppExeName}"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent

@@ -111,7 +111,11 @@ namespace MenuApp
             periodEnd   = DateTime.Today.AddDays(30);
             BuildUI();
             LoadData();
-            Shown += async (_, _) => await InitWebViewAsync();
+            Shown += async (_, _) =>
+            {
+                await InitWebViewAsync();
+                _ = UpdateChecker.CheckAsync();
+            };
         }
 
         // ═══════════════════════════════════════════════════ BUILD UI
