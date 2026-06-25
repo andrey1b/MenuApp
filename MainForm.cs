@@ -106,6 +106,9 @@ namespace MenuApp
         {
             EnsureDataFiles();
             ExcelPriceService.DataDirectory = AppDir;
+            Icon = Icon.ExtractAssociatedIcon(
+                System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
+                ?? Application.ExecutablePath);
             LoadSettings();
             periodStart = DateTime.Today;
             periodEnd   = DateTime.Today.AddDays(30);
