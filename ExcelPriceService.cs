@@ -65,6 +65,25 @@ namespace MenuApp
             catch { }
         }
 
+        // ── Источник покупок ──────────────────────────────────────
+
+        // Откуда были взяты последние покупки: "SeniorHub" или "Excel".
+        public static string LastSource { get; private set; } = "Excel";
+
+        // Приоритет: общая база «Офиса пенсионера» (наполняет HomeAccounting),
+        // при её отсутствии/пустоте — Excel HomeB как fallback.
+        public static List<FoodPurchase> LoadPurchases()
+        {
+            var shared = SharedDbPriceService.ReadPurchases();
+            if (shared.Count > 0)
+            {
+                LastSource = "SeniorHub";
+                return shared;
+            }
+            LastSource = "Excel";
+            return ReadPurchases();
+        }
+
         // ── Excel reading ─────────────────────────────────────────
 
         // Returns all "Продукты питания" rows from Sheet1.

@@ -1812,11 +1812,22 @@ namespace MenuApp
             int mapped = priceMappings.Count(m => !string.IsNullOrWhiteSpace(m.ExcelName));
             int total  = priceMappings.Count;
             int loaded = excelPurchases.Count;
-            bool fileOk = System.IO.File.Exists(ExcelPriceService.ExcelFilePath);
-            lblRealStatus.Text = fileOk
-                ? $"  Загружено {loaded} записей из файла расходов  |  Сопоставлено: {mapped} из {total} продуктов"
-                : $"  ⚠ Файл не найден: {ExcelPriceService.ExcelFilePath}";
-            lblRealStatus.ForeColor = fileOk ? Color.DimGray : Color.Crimson;
+            bool fromShared = ExcelPriceService.LastSource == "SeniorHub";
+
+            if (fromShared)
+            {
+                lblRealStatus.Text =
+                    $"  Загружено {loaded} записей из общей базы «Офиса пенсионера»  |  Сопоставлено: {mapped} из {total} продуктов";
+                lblRealStatus.ForeColor = Color.SeaGreen;
+            }
+            else
+            {
+                bool fileOk = System.IO.File.Exists(ExcelPriceService.ExcelFilePath);
+                lblRealStatus.Text = fileOk
+                    ? $"  Загружено {loaded} записей из файла расходов  |  Сопоставлено: {mapped} из {total} продуктов"
+                    : $"  ⚠ Нет данных: общая база пуста и файл не найден ({ExcelPriceService.ExcelFilePath})";
+                lblRealStatus.ForeColor = fileOk ? Color.DimGray : Color.Crimson;
+            }
         }
 
         private void DgvRealPrices_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
@@ -1866,7 +1877,7 @@ namespace MenuApp
 
         private void RefreshFromExcel()
         {
-            excelPurchases = ExcelPriceService.ReadPurchases();
+            excelPurchases = ExcelPriceService.LoadPurchases();
             excelNames     = ExcelPriceService.GetDistinctNames(excelPurchases);
             realPriceData  = ExcelPriceService.ComputeRealPrices(priceMappings, excelPurchases);
             FillRealPricesTab();
@@ -1876,7 +1887,7 @@ namespace MenuApp
         private void LoadRealPrices()
         {
             priceMappings  = ExcelPriceService.LoadMappings();
-            excelPurchases = ExcelPriceService.ReadPurchases();
+            excelPurchases = ExcelPriceService.LoadPurchases();
             excelNames     = ExcelPriceService.GetDistinctNames(excelPurchases);
 
             // Ensure every app product has a mapping entry (auto-match if missing)
