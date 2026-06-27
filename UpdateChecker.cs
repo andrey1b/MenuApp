@@ -2,19 +2,23 @@ using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace MenuApp
 {
     static class UpdateChecker
     {
-        public const string CurrentVersion = "1.0.3";
+        public const string CurrentVersion = "1.0.4";
 
-        private const string ApiUrl      = "https://api.github.com/repos/andrey1b/MenuApp/releases/latest";
-        private const string ReleasesUrl = "https://github.com/andrey1b/MenuApp/releases/latest";
+        private const string ApiUrl       = "https://api.github.com/repos/andrey1b/MenuApp/releases/latest";
+        public  const string ReleasesUrl  = "https://github.com/andrey1b/MenuApp/releases/latest";
 
-        public static async Task CheckAsync()
+        // Проверяет последнюю версию на GitHub.
+        // onResult(null)        — актуальна или нет сети;
+        // onResult("1.0.5")     — доступна новая версия (без префикса v).
+        // Колбэк вызывается в фоновом потоке — UI трогать через BeginInvoke.
+        public static async Task CheckAsync(Action<string?> onResult)
         {
+            string? newer = null;
             try
             {
                 using var http = new HttpClient();
@@ -27,22 +31,11 @@ namespace MenuApp
                 var latestVersion = tag.TrimStart('v');
 
                 if (IsNewer(latestVersion, CurrentVersion))
-                {
-                    var result = MessageBox.Show(
-                        $"Доступна новая версия {latestVersion}.\nОткрыть страницу загрузки?",
-                        "Обновление MenuApp",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Information);
-
-                    if (result == DialogResult.Yes)
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = ReleasesUrl,
-                            UseShellExecute = true
-                        });
-                }
+                    newer = latestVersion;
             }
-            catch { }
+            catch { newer = null; }
+
+            onResult(newer);
         }
 
         private static bool IsNewer(string latest, string current)

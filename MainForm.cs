@@ -36,6 +36,8 @@ namespace MenuApp
         // ── UI refs ───────────────────────────────────────────────
         private Label lblBudgetInfo = null!;
         private Label lblTierInfo   = null!;
+        private Label lblUpdateInfo = null!;   // уведомление об обновлении (после «Резерв…»)
+        private string? _latestVersion;        // версия из GitHub, если доступнее текущей
 
         // Dashboard "Сегодня"
         private WebView2? webView;
@@ -117,7 +119,7 @@ namespace MenuApp
             Shown += async (_, _) =>
             {
                 await InitWebViewAsync();
-                _ = UpdateChecker.CheckAsync();
+                _ = UpdateChecker.CheckAsync(OnUpdateChecked);
             };
         }
 
@@ -144,6 +146,16 @@ namespace MenuApp
                 AutoSize = true
             };
 
+            // Номер версии — справа от заголовка, между ним и строкой бюджета
+            var lblVersion = new Label
+            {
+                Text = "v" + UpdateChecker.CurrentVersion,
+                Font = new Font("Segoe UI", 8),
+                ForeColor = Color.LightSteelBlue,
+                AutoSize = true,
+                Location = new Point(172, 16)
+            };
+
             lblBudgetInfo = new Label
             {
                 Font = new Font("Segoe UI", 9),
@@ -158,6 +170,25 @@ namespace MenuApp
                 ForeColor = Color.LightYellow,
                 Location = new Point(14, 42),
                 AutoSize = true
+            };
+
+            // Уведомление об обновлении — после строки «Резерв…», заполняется при наличии новой версии
+            lblUpdateInfo = new Label
+            {
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.Gold,
+                Location = new Point(14, 42),
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Visible = false
+            };
+            lblUpdateInfo.Click += (_, _) =>
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = UpdateChecker.ReleasesUrl,
+                    UseShellExecute = true
+                });
             };
 
             // ── Period row + today's date + recipe buttons (all in header, row 3) ──
@@ -215,13 +246,13 @@ namespace MenuApp
                 AutoSize = true
             };
 
-            // Today's date + daily stats — filled by FillDashboardTab
+            // Дата + калории дня — в строке 1 после бюджета (позицию задаёт UpdateBudgetLabel)
             lblDayDate = new Label
             {
                 Text = DateTime.Today.ToString("ddd, d MMM", new CultureInfo("ru-RU")),
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9),
                 ForeColor = Color.White,
-                Location = new Point(590, 71),
+                Location = new Point(600, 12),
                 AutoSize = true
             };
 
@@ -241,36 +272,41 @@ namespace MenuApp
             _btnSearchYT.Click     += (_, _) => SearchOnEngine(2);
             SetEngineButtonsEnabled(false);
 
+            // Настройки — в одном ряду с кнопками поиска, размер как у соседних
+            var btnSettings = new Button
+            {
+                Text = "Настройки",
+                Width = 74, Height = 28,
+                BackColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 7.5f),
+                Padding = new Padding(0),
+                ForeColor = Color.SteelBlue
+            };
+            btnSettings.FlatAppearance.BorderColor = Color.LightSteelBlue;
+            btnSettings.Click += BtnSettings_Click;
+
+            // Ряд справа: Рецепт: [Google][Bing][YouTube][Настройки]
             void PlaceRecipeRow()
             {
-                int r = header.Width - 128;
-                _btnSearchYT!.Location     = new Point(r - 70, 65);
-                _btnSearchBing!.Location   = new Point(r - 133, 65);
-                _btnSearchGoogle!.Location = new Point(r - 204, 65);
-                lblRecipeHint.Location     = new Point(r - 260, 71);
+                const int btnW = 74, gap = 5, y = 65;
+                int settingsX = header.Width - 12 - btnW;
+                btnSettings.Location       = new Point(settingsX, y);
+                _btnSearchYT!.Location      = new Point(settingsX - 1 * (btnW + gap), y);
+                _btnSearchBing!.Location    = new Point(settingsX - 2 * (btnW + gap), y);
+                _btnSearchGoogle!.Location  = new Point(settingsX - 3 * (btnW + gap), y);
+                lblRecipeHint.Location      = new Point(settingsX - 3 * (btnW + gap) - 56, 71);
             }
 
             dtpPeriodStart.ValueChanged += OnPeriodChanged;
             dtpPeriodEnd.ValueChanged   += OnPeriodChanged;
 
-            var btnSettings = new Button
-            {
-                Text = "Настройки",
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Width = 110, Height = 32,
-                BackColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                ForeColor = Color.SteelBlue
-            };
-            btnSettings.FlatAppearance.BorderColor = Color.LightSteelBlue;
-            header.Resize += (_, _) => { btnSettings.Location = new Point(header.Width - 120, 10); PlaceRecipeRow(); };
-            btnSettings.Click += BtnSettings_Click;
-            Shown += (_, _) => { btnSettings.Location = new Point(header.Width - 120, 10); PlaceRecipeRow(); };
+            header.Resize += (_, _) => { PlaceRecipeRow(); };
+            Shown += (_, _) => { PlaceRecipeRow(); };
 
             header.Controls.AddRange(new Control[]
             {
-                lblTitle, lblBudgetInfo, lblTierInfo,
+                lblTitle, lblVersion, lblBudgetInfo, lblTierInfo, lblUpdateInfo,
                 dtpPeriodStart, dtpPeriodEnd,
                 btnApplyPeriod, btn7d, btn30d, lblPeriodWarning, lblDayDate,
                 lblRecipeHint, _btnSearchGoogle!, _btnSearchBing!, _btnSearchYT!,
@@ -2367,9 +2403,10 @@ namespace MenuApp
             }
 
             string dateStr = today.ToString("ddd, d MMM", culture);
+            // Стоимость дня и состав семьи не дублируем — они уже в строке бюджета выше
             lblDayDate.Text = meal != null
-                ? $"{dateStr}  |  {totalCal} ккал  |  {totalCost:F0}/{dayBudget:F0} грн  |  {familyCount} чел."
-                : $"{dateStr}  |  вне плана  |  {familyCount} чел.";
+                ? $"{dateStr}  |  {totalCal} ккал"
+                : $"{dateStr}  |  вне плана";
         }
 
         // ── Recipe search ─────────────────────────────────────────
@@ -2588,6 +2625,24 @@ namespace MenuApp
 
             lblTierInfo.Text      = $"Минимум выживания: {minCost:N0} грн  |  Базовый рацион: {basicCost:N0} грн  |  {tierLabel}";
             lblTierInfo.ForeColor = tierColor;
+
+            // Дата/калории — сразу после строки бюджета; уведомление — после строки «Резерв…»
+            lblDayDate.Location    = new Point(lblBudgetInfo.Right + 20, 12);
+            if (lblUpdateInfo.Visible)
+                lblUpdateInfo.Location = new Point(lblTierInfo.Right + 20, 42);
+        }
+
+        // Результат проверки обновлений (вызывается из фонового потока)
+        private void OnUpdateChecked(string? latest)
+        {
+            if (latest == null || !IsHandleCreated) return;
+            _latestVersion = latest;
+            BeginInvoke(new Action(() =>
+            {
+                lblUpdateInfo.Text     = $"●  Доступно обновление v{latest} — скачать";
+                lblUpdateInfo.Visible  = true;
+                lblUpdateInfo.Location  = new Point(lblTierInfo.Right + 20, 42);
+            }));
         }
 
         private void SaveSettings()
