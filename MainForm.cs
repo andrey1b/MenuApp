@@ -257,16 +257,9 @@ namespace MenuApp
             };
 
             // Recipe engine buttons — right-anchored, just before Settings button
-            var lblRecipeHint = new Label
-            {
-                Text = "Рецепт:",
-                Font = new Font("Segoe UI", 8),
-                ForeColor = Color.LightCyan,
-                AutoSize = true
-            };
-            _btnSearchGoogle = MakeEngineBtn("Google",  Color.FromArgb(66, 133, 244), 0, 65);
-            _btnSearchBing   = MakeEngineBtn("Bing",    Color.FromArgb(0,  120, 215), 0, 65);
-            _btnSearchYT     = MakeEngineBtn("YouTube", Color.FromArgb(200, 30,  30), 0, 65);
+            _btnSearchGoogle = MakeEngineBtn("Google",  Color.FromArgb(62, 135, 65), 0, 65);
+            _btnSearchBing   = MakeEngineBtn("Bing",    Color.FromArgb(62, 135, 65), 0, 65);
+            _btnSearchYT     = MakeEngineBtn("YouTube", Color.FromArgb(62, 135, 65), 0, 65);
             _btnSearchGoogle.Click += (_, _) => SearchOnEngine(0);
             _btnSearchBing.Click   += (_, _) => SearchOnEngine(1);
             _btnSearchYT.Click     += (_, _) => SearchOnEngine(2);
@@ -277,13 +270,13 @@ namespace MenuApp
             {
                 Text = "Настройки",
                 Width = 74, Height = 28,
-                BackColor = Color.White,
+                BackColor = Color.FromArgb(62, 135, 65),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 7.5f),
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
                 Padding = new Padding(0),
-                ForeColor = Color.FromArgb(44, 95, 45)
+                ForeColor = Color.White
             };
-            btnSettings.FlatAppearance.BorderColor = Color.FromArgb(168, 213, 169);
+            btnSettings.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnSettings.Click += BtnSettings_Click;
 
             // Ряд справа: Рецепт: [Google][Bing][YouTube][Настройки]
@@ -295,7 +288,6 @@ namespace MenuApp
                 _btnSearchYT!.Location      = new Point(settingsX - 1 * (btnW + gap), y);
                 _btnSearchBing!.Location    = new Point(settingsX - 2 * (btnW + gap), y);
                 _btnSearchGoogle!.Location  = new Point(settingsX - 3 * (btnW + gap), y);
-                lblRecipeHint.Location      = new Point(settingsX - 3 * (btnW + gap) - 56, 71);
             }
 
             dtpPeriodStart.ValueChanged += OnPeriodChanged;
@@ -309,7 +301,7 @@ namespace MenuApp
                 lblTitle, lblVersion, lblBudgetInfo, lblTierInfo, lblUpdateInfo,
                 dtpPeriodStart, dtpPeriodEnd,
                 btnApplyPeriod, btn7d, btn30d, lblPeriodWarning, lblDayDate,
-                lblRecipeHint, _btnSearchGoogle!, _btnSearchBing!, _btnSearchYT!,
+                _btnSearchGoogle!, _btnSearchBing!, _btnSearchYT!,
                 btnSettings
             });
 
@@ -2172,10 +2164,10 @@ namespace MenuApp
 
         private static readonly (string title, Color header, Color bg)[] CardThemes =
         {
-            ("ЗАВТРАК", Color.FromArgb(244, 162,  97), Color.FromArgb(255, 249, 240)),
-            ("ОБЕД",    Color.FromArgb(199,  91,  58), Color.FromArgb(255, 245, 242)),
-            ("УЖИН",    Color.FromArgb( 69, 123, 157), Color.FromArgb(240, 246, 252)),
-            ("ПОЛДНИК", Color.FromArgb( 82, 183, 136), Color.FromArgb(240, 253, 247)),
+            ("ЗАВТРАК", Color.FromArgb(120, 180, 122), Color.FromArgb(238, 252, 238)),  // светло-зелёный
+            ("ОБЕД",    Color.FromArgb( 88, 150,  90), Color.FromArgb(230, 246, 230)),  // средне-светлый
+            ("УЖИН",    Color.FromArgb( 62, 135,  65), Color.FromArgb(222, 242, 222)),  // средний (#3E8741)
+            ("ПОЛДНИК", Color.FromArgb( 44,  95,  45), Color.FromArgb(214, 236, 214)),  // тёмно-зелёный (#2C5F2D)
         };
 
         private static readonly string[] SearchEngines =
@@ -2297,13 +2289,13 @@ namespace MenuApp
             btnCardRecipe[index] = new Button
             {
                 Text = "Найти рецепт", Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(248, 248, 252),
+                BackColor = Color.FromArgb(62, 135, 65),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8, FontStyle.Bold),
-                ForeColor = Color.FromArgb(45, 80, 140),
+                ForeColor = Color.White,
                 Margin = new Padding(2, 3, 3, 3)
             };
-            btnCardRecipe[index].FlatAppearance.BorderColor = Color.FromArgb(180, 190, 210);
+            btnCardRecipe[index].FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnCardRecipe[index].Click += (_, _) => SearchRecipe(captured);
 
             headerRow.Controls.Add(lblHeader,             0, 0);
