@@ -132,10 +132,10 @@ namespace MenuApp
             Height = 720;
             MinimumSize = new Size(900, 590);
             StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.WhiteSmoke;
+            BackColor = Color.FromArgb(208, 232, 208);
 
             // ── Header ──
-            var header = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.SteelBlue };
+            var header = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.FromArgb(44, 95, 45) };
 
             var lblTitle = new Label
             {
@@ -151,7 +151,7 @@ namespace MenuApp
             {
                 Text = "v" + UpdateChecker.CurrentVersion,
                 Font = new Font("Segoe UI", 8),
-                ForeColor = Color.LightSteelBlue,
+                ForeColor = Color.FromArgb(168, 213, 169),
                 AutoSize = true,
                 Location = new Point(172, 16)
             };
@@ -213,19 +213,19 @@ namespace MenuApp
                 Text = "▶ Применить",
                 Location = new Point(254, 65),
                 Width = 112, Height = 28,
-                BackColor = Color.FromArgb(60, 100, 155),
+                BackColor = Color.FromArgb(62, 135, 65),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
-            btnApplyPeriod.FlatAppearance.BorderColor = Color.FromArgb(40, 80, 130);
+            btnApplyPeriod.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnApplyPeriod.Click += BtnApplyPeriod_Click;
 
             // Quick period buttons
             Button MakeQuickBtn(string text) => new Button
             {
                 Text = text, Height = 28,
-                BackColor = Color.FromArgb(45, 85, 135),
+                BackColor = Color.FromArgb(62, 135, 65),
                 ForeColor = Color.White, FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8, FontStyle.Bold)
             };
@@ -233,8 +233,8 @@ namespace MenuApp
             var btn30d = MakeQuickBtn("30 дн.");
             btn7d.Width  = 54; btn7d.Location  = new Point(372, 65);
             btn30d.Width = 64; btn30d.Location = new Point(430, 65);
-            btn7d.FlatAppearance.BorderColor  = Color.FromArgb(30, 70, 120);
-            btn30d.FlatAppearance.BorderColor = Color.FromArgb(30, 70, 120);
+            btn7d.FlatAppearance.BorderColor  = Color.FromArgb(44, 95, 45);
+            btn30d.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btn7d.Click  += (_, _) => { dtpPeriodStart.Value = DateTime.Today; dtpPeriodEnd.Value = DateTime.Today.AddDays(6);  BtnApplyPeriod_Click(null, EventArgs.Empty); };
             btn30d.Click += (_, _) => { dtpPeriodStart.Value = DateTime.Today; dtpPeriodEnd.Value = DateTime.Today.AddDays(29); BtnApplyPeriod_Click(null, EventArgs.Empty); };
 
@@ -281,9 +281,9 @@ namespace MenuApp
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 7.5f),
                 Padding = new Padding(0),
-                ForeColor = Color.SteelBlue
+                ForeColor = Color.FromArgb(44, 95, 45)
             };
-            btnSettings.FlatAppearance.BorderColor = Color.LightSteelBlue;
+            btnSettings.FlatAppearance.BorderColor = Color.FromArgb(168, 213, 169);
             btnSettings.Click += BtnSettings_Click;
 
             // Ряд справа: Рецепт: [Google][Bing][YouTube][Настройки]
@@ -328,8 +328,8 @@ namespace MenuApp
                 var tc  = (TabControl)s!;
                 var pg  = tc.TabPages[e.Index];
                 bool sel = tc.SelectedIndex == e.Index;
-                Color bg  = sel ? Color.SteelBlue : Color.FromArgb(228, 235, 248);
-                Color fg  = sel ? Color.White : Color.FromArgb(30, 55, 95);
+                Color bg  = sel ? Color.FromArgb(44, 95, 45) : Color.FromArgb(200, 222, 200);
+                Color fg  = sel ? Color.White : Color.FromArgb(44, 95, 45);
                 using var bgBrush = new SolidBrush(bg);
                 e.Graphics.FillRectangle(bgBrush, e.Bounds);
                 // separator line on right edge
@@ -339,7 +339,7 @@ namespace MenuApp
                 // blue underline for unselected tabs
                 if (!sel)
                 {
-                    using var ul = new Pen(Color.SteelBlue, 2);
+                    using var ul = new Pen(Color.FromArgb(44, 95, 45), 2);
                     e.Graphics.DrawLine(ul, e.Bounds.Left, e.Bounds.Bottom - 1,
                                             e.Bounds.Right - 1, e.Bounds.Bottom - 1);
                 }
@@ -390,10 +390,10 @@ namespace MenuApp
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 9),
-                GridColor = Color.LightSteelBlue,
+                GridColor = Color.FromArgb(168, 213, 169),
                 ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.SteelBlue,
+                    BackColor = Color.FromArgb(44, 95, 45),
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -429,7 +429,7 @@ namespace MenuApp
               DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9, FontStyle.Bold) } });
             dgvMenu.Columns.Add(new DataGridViewTextBoxColumn
             { Name = "CalNorm", HeaderText = "Норма ккал",  Width = 85, AutoSizeMode = DataGridViewAutoSizeColumnMode.None, ReadOnly = true,
-              DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.SteelBlue } });
+              DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.FromArgb(44, 95, 45) } });
             dgvMenu.Columns.Add(new DataGridViewTextBoxColumn
             { Name = "DayCost", HeaderText = "~Стоим. грн", Width = 90, AutoSizeMode = DataGridViewAutoSizeColumnMode.None, ReadOnly = true,
               DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.DarkGreen } });
@@ -462,10 +462,10 @@ namespace MenuApp
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 9),
-                GridColor = Color.LightSteelBlue,
+                GridColor = Color.FromArgb(168, 213, 169),
                 ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.SteelBlue,
+                    BackColor = Color.FromArgb(44, 95, 45),
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -618,15 +618,15 @@ namespace MenuApp
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 9),
-                GridColor = Color.LightSteelBlue,
+                GridColor = Color.FromArgb(168, 213, 169),
                 ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.SlateGray,
+                    BackColor = Color.FromArgb(62, 135, 65),
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     Alignment = DataGridViewContentAlignment.MiddleCenter
                 },
-                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(248, 248, 255) },
+                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 248, 240) },
                 RowTemplate = { Height = 26 }
             };
             dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -924,7 +924,7 @@ namespace MenuApp
 
             var totRow = dgvMenu.Rows[totIdx];
             totRow.ReadOnly = true;
-            totRow.DefaultCellStyle.BackColor = Color.FromArgb(35, 55, 85);
+            totRow.DefaultCellStyle.BackColor = Color.FromArgb(30, 58, 30);
             totRow.DefaultCellStyle.ForeColor = Color.White;
             totRow.DefaultCellStyle.Font      = new Font("Segoe UI", 9, FontStyle.Bold);
             totRow.Cells["CalDay"].Style.ForeColor  = Color.FromArgb(150, 220, 150);
@@ -1196,7 +1196,7 @@ namespace MenuApp
             var totRow = dgvProducts.Rows[totIdx];
             totRow.Tag = "total";
             totRow.ReadOnly = true;
-            totRow.DefaultCellStyle.BackColor = Color.FromArgb(35, 55, 85);
+            totRow.DefaultCellStyle.BackColor = Color.FromArgb(30, 58, 30);
             totRow.DefaultCellStyle.ForeColor = Color.White;
             totRow.DefaultCellStyle.Font      = new Font("Segoe UI", 9, FontStyle.Bold);
             totRow.Cells["Sum"].Style.ForeColor  = Color.FromArgb(130, 230, 130);
@@ -1390,12 +1390,12 @@ namespace MenuApp
             totRow.Tag = "total";
             totRow.ReadOnly = true;
             totRow.Cells["Done"].ReadOnly = true;
-            totRow.DefaultCellStyle.BackColor = Color.FromArgb(35, 55, 85);
+            totRow.DefaultCellStyle.BackColor = Color.FromArgb(30, 58, 30);
             totRow.DefaultCellStyle.ForeColor = Color.White;
             totRow.DefaultCellStyle.Font      = new Font(dgv.Font, FontStyle.Bold);
             totRow.Cells["Price"].Style.ForeColor = Color.FromArgb(160, 160, 160);
             totRow.Cells["Paid"].Style.ForeColor  = Color.FromArgb(130, 230, 130);
-            totRow.Cells["Paid"].Style.BackColor  = Color.FromArgb(35, 55, 85);
+            totRow.Cells["Paid"].Style.BackColor  = Color.FromArgb(30, 58, 30);
 
             // Tag grid for paid-data persistence and restore saved values
             string dateKey = date.ToString("yyyy-MM-dd");
@@ -1413,7 +1413,7 @@ namespace MenuApp
                 Dock = DockStyle.Top, Height = 36,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                BackColor = Color.FromArgb(214, 234, 255),
+                BackColor = Color.FromArgb(200, 228, 200),
                 ForeColor = Color.DarkSlateGray
             };
             lblWeeklyInfo = new Label
@@ -1422,7 +1422,7 @@ namespace MenuApp
                 TextAlign = ContentAlignment.MiddleRight,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(0, 0, 12, 0),
-                BackColor = Color.FromArgb(220, 240, 255),
+                BackColor = Color.FromArgb(210, 236, 210),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
@@ -1497,15 +1497,15 @@ namespace MenuApp
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 9),
-                GridColor = Color.LightSteelBlue,
+                GridColor = Color.FromArgb(168, 213, 169),
                 ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.SlateGray,
+                    BackColor = Color.FromArgb(62, 135, 65),
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     Alignment = DataGridViewContentAlignment.MiddleCenter
                 },
-                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(248, 248, 255) },
+                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 248, 240) },
                 RowTemplate = { Height = 28 }
             };
             dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -1663,7 +1663,7 @@ namespace MenuApp
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top, Height = 42,
-                BackColor = Color.FromArgb(240, 244, 248),
+                BackColor = Color.FromArgb(228, 244, 228),
                 Padding = new Padding(6, 6, 6, 0)
             };
 
@@ -1680,11 +1680,11 @@ namespace MenuApp
                 Location = new Point(toolbar.Width - 175, 7),
                 Width = 160, Height = 28,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.SteelBlue, ForeColor = Color.White,
+                BackColor = Color.FromArgb(44, 95, 45), ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
-            btnRefresh.FlatAppearance.BorderColor = Color.FromArgb(40, 90, 150);
+            btnRefresh.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnRefresh.Click += (_, _) => RefreshFromExcel();
 
             toolbar.Controls.AddRange(new Control[] { lblFile, btnRefresh });
@@ -1696,7 +1696,7 @@ namespace MenuApp
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 8),
                 Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.FromArgb(235, 240, 248),
+                BackColor = Color.FromArgb(228, 242, 228),
                 BorderStyle = BorderStyle.FixedSingle,
                 ForeColor = Color.DimGray
             };
@@ -1714,14 +1714,14 @@ namespace MenuApp
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 9),
-                GridColor = Color.LightSteelBlue,
+                GridColor = Color.FromArgb(168, 213, 169),
                 ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.SteelBlue, ForeColor = Color.White,
+                    BackColor = Color.FromArgb(44, 95, 45), ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     Alignment = DataGridViewContentAlignment.MiddleCenter
                 },
-                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(246, 249, 255) },
+                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 248, 240) },
                 RowTemplate = { Height = 26 }
             };
             dgvRealPrices.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -2123,12 +2123,12 @@ namespace MenuApp
             var tr = dgv.Rows[ti];
             tr.Tag = "total";
             tr.ReadOnly = true;
-            tr.DefaultCellStyle.BackColor = Color.FromArgb(35, 55, 85);
+            tr.DefaultCellStyle.BackColor = Color.FromArgb(30, 58, 30);
             tr.DefaultCellStyle.ForeColor = Color.White;
             tr.DefaultCellStyle.Font      = new Font(dgv.Font, FontStyle.Bold);
             tr.Cells["Price"].Style.ForeColor = Color.FromArgb(160, 160, 160);
             tr.Cells["Paid"].Style.ForeColor  = Color.FromArgb(130, 230, 130);
-            tr.Cells["Paid"].Style.BackColor  = Color.FromArgb(35, 55, 85);
+            tr.Cells["Paid"].Style.BackColor  = Color.FromArgb(30, 58, 30);
         }
 
         private void UpdateShoppingPaidTotal(DataGridView dgv)
@@ -2194,7 +2194,7 @@ namespace MenuApp
             {
                 Dock = DockStyle.Top, Height = 104,
                 ColumnCount = 4, RowCount = 1,
-                BackColor = Color.FromArgb(240, 242, 246),
+                BackColor = Color.FromArgb(208, 232, 208),
                 Padding = new Padding(6, 6, 6, 4)
             };
             for (int i = 0; i < 4; i++)
