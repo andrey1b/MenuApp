@@ -208,33 +208,29 @@ namespace MenuApp
                 Width = 120
             };
 
-            var btnApplyPeriod = new Button
+            var btnApplyPeriod = new RoundedButton
             {
                 Text = "▶ Применить",
                 Location = new Point(254, 65),
-                Width = 112, Height = 28,
+                Width = 120, Height = 30,
                 BackColor = Color.FromArgb(62, 135, 65),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
-            btnApplyPeriod.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnApplyPeriod.Click += BtnApplyPeriod_Click;
 
             // Quick period buttons
-            Button MakeQuickBtn(string text) => new Button
+            RoundedButton MakeQuickBtn(string text) => new RoundedButton
             {
-                Text = text, Height = 28,
+                Text = text, Height = 30,
                 BackColor = Color.FromArgb(62, 135, 65),
-                ForeColor = Color.White, FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold)
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
             var btn7d  = MakeQuickBtn("7 дн.");
             var btn30d = MakeQuickBtn("30 дн.");
-            btn7d.Width  = 54; btn7d.Location  = new Point(372, 65);
-            btn30d.Width = 64; btn30d.Location = new Point(430, 65);
-            btn7d.FlatAppearance.BorderColor  = Color.FromArgb(44, 95, 45);
-            btn30d.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
+            btn7d.Width  = 58;  btn7d.Location  = new Point(382, 65);
+            btn30d.Width = 68; btn30d.Location = new Point(444, 65);
             btn7d.Click  += (_, _) => { dtpPeriodStart.Value = DateTime.Today; dtpPeriodEnd.Value = DateTime.Today.AddDays(6);  BtnApplyPeriod_Click(null, EventArgs.Empty); };
             btn30d.Click += (_, _) => { dtpPeriodStart.Value = DateTime.Today; dtpPeriodEnd.Value = DateTime.Today.AddDays(29); BtnApplyPeriod_Click(null, EventArgs.Empty); };
 
@@ -266,17 +262,14 @@ namespace MenuApp
             SetEngineButtonsEnabled(false);
 
             // Настройки — в одном ряду с кнопками поиска, размер как у соседних
-            var btnSettings = new Button
+            var btnSettings = new RoundedButton
             {
                 Text = "Настройки",
-                Width = 74, Height = 28,
+                Width = 78, Height = 30,
                 BackColor = Color.FromArgb(62, 135, 65),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
-                Padding = new Padding(0),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 ForeColor = Color.White
             };
-            btnSettings.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnSettings.Click += BtnSettings_Click;
 
             // Ряд справа: Рецепт: [Google][Bing][YouTube][Настройки]
@@ -1666,17 +1659,15 @@ namespace MenuApp
                 Font = new Font("Segoe UI", 8), ForeColor = Color.DimGray
             };
 
-            var btnRefresh = new Button
+            var btnRefresh = new RoundedButton
             {
                 Text = "⟳ Обновить из файла",
-                Location = new Point(toolbar.Width - 175, 7),
-                Width = 160, Height = 28,
+                Location = new Point(toolbar.Width - 180, 6),
+                Width = 168, Height = 30,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(44, 95, 45), ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(62, 135, 65), ForeColor = Color.White,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
-            btnRefresh.FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnRefresh.Click += (_, _) => RefreshFromExcel();
 
             toolbar.Controls.AddRange(new Control[] { lblFile, btnRefresh });
@@ -2218,14 +2209,13 @@ namespace MenuApp
             return tab;
         }
 
-        private static Button MakeEngineBtn(string text, Color bg, int x, int y) =>
-            new Button
+        private static RoundedButton MakeEngineBtn(string text, Color bg, int x, int y) =>
+            new RoundedButton
             {
                 Text = text, Location = new Point(x, y),
-                Width = 74, Height = 28,
+                Width = 78, Height = 30,
                 BackColor = bg, ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
 
         private void SetEngineButtonsEnabled(bool enabled)
@@ -2286,16 +2276,15 @@ namespace MenuApp
             };
 
             int captured = index;
-            btnCardRecipe[index] = new Button
+            btnCardRecipe[index] = new RoundedButton
             {
                 Text = "Найти рецепт", Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(62, 135, 65),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 ForeColor = Color.White,
-                Margin = new Padding(2, 3, 3, 3)
+                Margin = new Padding(2, 3, 3, 3),
+                CornerRadius = 6
             };
-            btnCardRecipe[index].FlatAppearance.BorderColor = Color.FromArgb(44, 95, 45);
             btnCardRecipe[index].Click += (_, _) => SearchRecipe(captured);
 
             headerRow.Controls.Add(lblHeader,             0, 0);
