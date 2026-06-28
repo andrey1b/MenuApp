@@ -22,6 +22,20 @@ namespace MenuApp
             Cursor = Cursors.Hand;
         }
 
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            ApplyRegion();
+        }
+
+        private void ApplyRegion()
+        {
+            if (Width <= 0 || Height <= 0) return;
+            var rect = new Rectangle(0, 0, Width, Height);
+            Region?.Dispose();
+            Region = new Region(RoundedPath(rect, CornerRadius));
+        }
+
         private bool _hover, _pressed;
 
         protected override void OnMouseEnter(EventArgs e) { _hover = true;  Invalidate(); base.OnMouseEnter(e); }
