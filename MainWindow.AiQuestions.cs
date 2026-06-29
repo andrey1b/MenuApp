@@ -67,7 +67,7 @@ public partial class MainWindow
     {
         var top = new SWF.Panel
         {
-            Dock = SWF.DockStyle.Top, Height = 90,
+            Dock = SWF.DockStyle.Top, Height = 92,
             BackColor = SD.Color.FromArgb(238, 248, 238)
         };
 
@@ -75,35 +75,42 @@ public partial class MainWindow
         {
             Dock = SWF.DockStyle.Fill,
             ColumnCount = 5, RowCount = 2,
-            Padding = new SWF.Padding(10, 8, 10, 4)
+            Padding = new SWF.Padding(10, 10, 10, 6)
         };
-        // Колонки: метка | поле вопроса | 3 кнопки фиксированной ширины
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 110));  // «Вопрос:»
+        // Колонки: метка | поле вопроса | 3 кнопки.
+        // Кнопки и метка — AutoSize (по тексту): корректно масштабируются при High-DPI,
+        // в отличие от Absolute-ширин в пикселях, которые при 2× DPI обрезают подписи.
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.AutoSize));       // «Вопрос:»
         grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));   // TextBox
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 155));  // Спросить
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 165));  // Сохранить все
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 135));  // API ключи
-        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 58));  // кнопки
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.AutoSize));        // Спросить
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.AutoSize));        // Сохранить все
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.AutoSize));        // API ключи
+        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.AutoSize));      // поле + кнопки
         grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 22));  // статус
 
         var lblQ = new SWF.Label
         {
-            Text = "Вопрос:", Dock = SWF.DockStyle.Fill,
-            TextAlign = SD.ContentAlignment.MiddleRight,
+            Text = "Вопрос:", AutoSize = true,
+            Anchor = SWF.AnchorStyles.Left,
+            Margin = new SWF.Padding(2, 0, 8, 0),
+            TextAlign = SD.ContentAlignment.MiddleLeft,
             Font = new SD.Font("Segoe UI", 13)
         };
 
+        // Поле ввода — одна строка, высота по шрифту (корректна при любом DPI),
+        // по центру строки по вертикали
         txAiQuestion = new SWF.TextBox
         {
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(6, 8, 6, 8),
-            Font = new SD.Font("Segoe UI", 13),
+            Anchor      = SWF.AnchorStyles.Left | SWF.AnchorStyles.Right,
+            Margin      = new SWF.Padding(2, 8, 8, 8),
+            Font        = new SD.Font("Segoe UI", 13),
             BorderStyle = SWF.BorderStyle.FixedSingle
         };
 
-        // Кнопки: FlatStyle.System — нативный скруглённый вид Windows 11
+        // Кнопки со скруглёнными углами; размер по тексту (AutoSize) → не обрезаются
         var btnAsk = MakeTopBtn("▶  Спросить",
             SD.Color.FromArgb(44, 95, 45), SD.Color.White);
-        var btnSaveAll = MakeTopBtn("💾  Сохранить все",
+        var btnSaveAll = MakeTopBtn("Сохранить все",
             SD.Color.FromArgb(195, 228, 195), SD.Color.FromArgb(30, 70, 30));
         var btnApiKeys = MakeTopBtn("⚙  API ключи",
             SD.Color.FromArgb(218, 222, 240), SD.Color.FromArgb(40, 50, 110));
@@ -113,7 +120,7 @@ public partial class MainWindow
             Dock = SWF.DockStyle.Fill,
             Font = new SD.Font("Segoe UI", 10), ForeColor = SD.Color.DimGray,
             TextAlign = SD.ContentAlignment.MiddleLeft,
-            Padding = new SWF.Padding(110, 0, 0, 0)
+            Padding = new SWF.Padding(4, 0, 0, 0)
         };
 
         btnAsk.Click     += async (_, _) => await AskAllAisAsync();
@@ -136,16 +143,18 @@ public partial class MainWindow
         return top;
     }
 
-    private static SWF.Button MakeTopBtn(string text, SD.Color bg, SD.Color fg) =>
-        new SWF.Button
+    private static RoundedButton MakeTopBtn(string text, SD.Color bg, SD.Color fg) =>
+        new RoundedButton
         {
             Text = text,
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 4, 6),
-            Font = new SD.Font("Segoe UI", 12, SD.FontStyle.Bold),
+            // AutoSize по тексту — ширина и высота подстраиваются под подпись и DPI
+            AutoSize = true,
+            Anchor   = SWF.AnchorStyles.Left,
+            Padding  = new SWF.Padding(16, 5, 16, 5),
+            Margin   = new SWF.Padding(4, 6, 4, 6),
+            Font     = new SD.Font("Segoe UI", 12, SD.FontStyle.Bold),
             BackColor = bg, ForeColor = fg,
-            FlatStyle = SWF.FlatStyle.Flat,
-            FlatAppearance = { BorderSize = 0 },
-            UseVisualStyleBackColor = false
+            CornerRadius = 9
         };
 
     // ── Прокручиваемая область с рядами ИИ ───────────
@@ -197,21 +206,11 @@ public partial class MainWindow
             btnAi.Click += (_, _) =>
                 Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
 
-            // ── Центральная ячейка (70%): текстбокс + строка статистики ──
-            var centerPanel = new SWF.TableLayoutPanel
-            {
-                Dock        = SWF.DockStyle.Fill,
-                Margin      = new SWF.Padding(3, 5, 3, 2),
-                ColumnCount = 1, RowCount = 2,
-                BackColor   = SD.Color.Transparent
-            };
-            centerPanel.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
-            centerPanel.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100));
-            centerPanel.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, StatsH));
-
+            // ── Центральная ячейка (70%): только текстбокс ──
             txAiResponse[i] = new SWF.RichTextBox
             {
                 Dock        = SWF.DockStyle.Fill,
+                Margin      = new SWF.Padding(3, 5, 3, 5),
                 Font        = new SD.Font("Segoe UI", 11),
                 ScrollBars  = SWF.RichTextBoxScrollBars.Both,
                 WordWrap    = true,
@@ -220,67 +219,136 @@ public partial class MainWindow
                 BorderStyle = SWF.BorderStyle.FixedSingle
             };
 
-            lblAiStats[i] = new SWF.Label
-            {
-                Dock      = SWF.DockStyle.Fill,
-                Text      = "Символов: 0 | Слов: 0",
-                Font      = new SD.Font("Segoe UI", 9),
-                ForeColor = SD.Color.Gray,
-                TextAlign = SD.ContentAlignment.MiddleLeft,
-                Padding   = new SWF.Padding(4, 0, 0, 0)
-            };
-
             int captIdx = i;
             txAiResponse[i].TextChanged += (_, _) => UpdateAiStats(captIdx);
 
-            centerPanel.Controls.Add(txAiResponse[i], 0, 0);
-            centerPanel.Controls.Add(lblAiStats[i],   0, 1);
-
-            // ── Правая ячейка (15%): чекбокс + кнопка «Сохранить» горизонтально ──
+            // ── Правая ячейка (15%): сверху чекбокс + «Сохранить», под ними статистика ──
             var rightGrid = new SWF.TableLayoutPanel
             {
                 Dock        = SWF.DockStyle.Fill,
                 Margin      = new SWF.Padding(3, 5, 5, 5),
-                ColumnCount = 2, RowCount = 1,
+                ColumnCount = 1, RowCount = 3,
                 BackColor   = SD.Color.Transparent
             };
-            rightGrid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 32));
             rightGrid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
-            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100));
+            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.AutoSize));        // чекбокс + кнопка (сверху)
+            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.AutoSize));        // статистика под кнопкой
+            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100));   // свободное место
 
-            cbAiEnabled[i] = new SWF.CheckBox
+            // Верхняя строка: чекбокс (в зелёной скруглённой рамке) + кнопка «Сохранить»
+            var topRow = new SWF.TableLayoutPanel
             {
-                Text      = "",
-                Dock      = SWF.DockStyle.Fill,
-                Font      = new SD.Font("Segoe UI", 12),
-                Checked   = true,
-                ForeColor = SD.Color.FromArgb(30, 70, 30),
-                TextAlign = SD.ContentAlignment.MiddleCenter
+                Dock         = SWF.DockStyle.Fill,
+                Margin       = new SWF.Padding(0),
+                ColumnCount  = 2, RowCount = 1,
+                AutoSize     = true,
+                AutoSizeMode = SWF.AutoSizeMode.GrowAndShrink,
+                BackColor    = SD.Color.Transparent
             };
+            topRow.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.AutoSize));
+            topRow.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
+            topRow.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.AutoSize));
 
-            var btnSave = new SWF.Button
+            var cbBox = MakeRoundedCheckBox(idx);
+
+            // Кнопка «Сохранить» — нормального размера (AutoSize по тексту), сверху, рядом с чекбоксом
+            var btnSave = new RoundedButton
             {
-                Text      = "💾 Сохранить",
-                Dock      = SWF.DockStyle.Fill,
-                Margin    = new SWF.Padding(4, 0, 0, 0),
+                Text      = "Сохранить",
+                AutoSize  = true,
+                Anchor    = SWF.AnchorStyles.Top | SWF.AnchorStyles.Left,
+                Padding   = new SWF.Padding(14, 6, 14, 6),
+                Margin    = new SWF.Padding(6, 4, 0, 0),
                 Font      = new SD.Font("Segoe UI", 11),
                 BackColor = SD.Color.FromArgb(200, 228, 200),
                 ForeColor = SD.Color.FromArgb(30, 70, 30),
-                FlatStyle = SWF.FlatStyle.Flat
+                CornerRadius = 8
             };
-            btnSave.FlatAppearance.BorderSize = 1;
             btnSave.Click += (_, _) => SaveSingleResponse(idx);
 
-            rightGrid.Controls.Add(cbAiEnabled[i], 0, 0);
-            rightGrid.Controls.Add(btnSave,         1, 0);
+            topRow.Controls.Add(cbBox,   0, 0);
+            topRow.Controls.Add(btnSave, 1, 0);
 
-            table.Controls.Add(btnAi,       0, i);
-            table.Controls.Add(centerPanel, 1, i);
-            table.Controls.Add(rightGrid,   2, i);
+            lblAiStats[i] = new SWF.Label
+            {
+                AutoSize  = true,
+                Anchor    = SWF.AnchorStyles.Left,
+                Text      = "Символов: 0 | Слов: 0",
+                Font      = new SD.Font("Segoe UI", 10),
+                ForeColor = SD.Color.FromArgb(90, 90, 90),
+                TextAlign = SD.ContentAlignment.MiddleLeft,
+                Margin    = new SWF.Padding(6, 2, 0, 0)
+            };
+
+            rightGrid.Controls.Add(topRow,        0, 0);
+            rightGrid.Controls.Add(lblAiStats[i], 0, 1);
+
+            table.Controls.Add(btnAi,          0, i);
+            table.Controls.Add(txAiResponse[i], 1, i);
+            table.Controls.Add(rightGrid,      2, i);
         }
 
         scroll.Controls.Add(table);
         return scroll;
+    }
+
+    // Чекбокс в белом поле с зелёной скруглённой рамкой, прижатый к верху строки.
+    // Рисуется вручную (размер по шрифту → корректно масштабируется при High-DPI);
+    // реальный CheckBox хранит состояние, которое читает остальной код.
+    private SWF.Panel MakeRoundedCheckBox(int i)
+    {
+        var cb = new SWF.CheckBox { Text = "", Checked = false };  // по умолчанию false
+        cbAiEnabled[i] = cb;
+
+        var box = new SWF.Panel
+        {
+            Anchor    = SWF.AnchorStyles.Top | SWF.AnchorStyles.Left,
+            Margin    = new SWF.Padding(2, 5, 8, 0),
+            Cursor    = SWF.Cursors.Hand,
+            BackColor = SD.Color.Transparent,
+            Font      = new SD.Font("Segoe UI", 15)
+        };
+        int s = box.Font.Height + 6;          // сторона квадрата по высоте шрифта
+        box.Size = new SD.Size(s, s);
+
+        box.Click += (_, _) => { cb.Checked = !cb.Checked; box.Invalidate(); };
+        box.Paint += (_, e) =>
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SD.Drawing2D.SmoothingMode.AntiAlias;
+            var r = new SD.Rectangle(2, 2, box.Width - 5, box.Height - 5);
+            using var path = RoundRect(r, 6);
+            using (var fill = new SD.SolidBrush(cb.Checked
+                       ? SD.Color.FromArgb(205, 235, 205) : SD.Color.White))
+                g.FillPath(fill, path);
+            using (var pen = new SD.Pen(SD.Color.FromArgb(44, 95, 45), 2.5f))
+                g.DrawPath(pen, path);
+
+            if (cb.Checked)
+            {
+                using var chk = new SD.Pen(SD.Color.FromArgb(30, 110, 40), 3f);
+                int w = box.Width, h = box.Height;
+                g.DrawLines(chk, new[]
+                {
+                    new SD.Point((int)(w * 0.26), (int)(h * 0.52)),
+                    new SD.Point((int)(w * 0.44), (int)(h * 0.70)),
+                    new SD.Point((int)(w * 0.76), (int)(h * 0.30)),
+                });
+            }
+        };
+        return box;
+    }
+
+    private static SD.Drawing2D.GraphicsPath RoundRect(SD.Rectangle r, int radius)
+    {
+        int d = radius * 2;
+        var p = new SD.Drawing2D.GraphicsPath();
+        p.AddArc(r.Left,      r.Top,        d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Top,        d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d,   0, 90);
+        p.AddArc(r.Left,      r.Bottom - d, d, d,  90, 90);
+        p.CloseFigure();
+        return p;
     }
 
     private void UpdateAiStats(int idx)

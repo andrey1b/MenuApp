@@ -7,7 +7,7 @@ namespace MenuApp
 {
     static class UpdateChecker
     {
-        public const string CurrentVersion = "2.2.3";
+        public const string CurrentVersion = "2.2.4";
 
         private const string ApiUrl       = "https://api.github.com/repos/andrey1b/MenuApp/releases/latest";
         public  const string ReleasesUrl  = "https://github.com/andrey1b/MenuApp/releases/latest";

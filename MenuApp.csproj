@@ -13,7 +13,6 @@
   <ItemGroup>
     <Compile Remove="Program.cs" />
     <Compile Remove="MainForm.cs" />
-    <Compile Remove="RoundedButton.cs" />
     <Compile Remove="SettingsForm.cs" />
     <Compile Remove="DailyMenuApp.cs" />
     <Compile Remove="Tab.cs" />
