@@ -191,5 +191,20 @@
     <Style x:Key="CellCenter" TargetType="TextBlock" BasedOn="{StaticResource CellLeft}">
         <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
+    <Style x:Key="CellRight" TargetType="TextBlock" BasedOn="{StaticResource CellLeft}">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+
+    <!-- Строка «Продуктов»: фон по уровню (RowBg) + особая строка ИТОГО -->
+    <Style x:Key="ProductRowStyle" TargetType="DataGridRow">
+        <Setter Property="Background" Value="{Binding RowBg}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                <Setter Property="Background" Value="#1E3A1E"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
 
 </ResourceDictionary>

@@ -20,8 +20,6 @@ public partial class MainWindow
 {
     // ══════════════════════════════════════════════════ ПОЛЯ ДАННЫХ
 
-    private SWF.DataGridView dgvProducts      = null!;
-    private SWF.Label        lblBudgetStatus  = null!;
     private SWF.DataGridView dgvRealPrices   = null!;
     private SWF.Label        lblRealStatus   = null!;
     private SWF.DataGridViewComboBoxColumn colExcelName = null!;
@@ -32,6 +30,9 @@ public partial class MainWindow
     private readonly ObservableCollection<ShoppingRow> shopTomorrow = new();
     private readonly ObservableCollection<ShoppingRow> shopWeekly   = new();
     private readonly ObservableCollection<ShoppingRow> shopMonthly  = new();
+
+    // Вкладка «Продукты» — WPF DataGrid dgProducts (MainWindow.xaml)
+    private readonly ObservableCollection<ProductRow> products = new();
 
     private List<MealDay>   mealPlan = new();
     private List<PriceItem> prices   = new();
@@ -57,9 +58,35 @@ public partial class MainWindow
             grid.Children.Add(host);
         }
 
-        AddHost(ProductsHost,   CreateProductsTabPanel());
         AddHost(RealPricesHost,   CreateRealPricesTabPanel());
         AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
+    }
+
+    // ══════════════════════════════════════════════════ WPF-ГРИД «ПРОДУКТЫ»
+
+    internal void InitProductsGrid()
+    {
+        dgProducts.ItemsSource = products;
+        colFreq.ItemsSource    = new[] { "ежедневно", "еженедельно", "ежемесячно" };
+
+        // Строка ИТОГО не редактируется
+        dgProducts.BeginningEdit += (_, e) =>
+        {
+            if (e.Row?.Item is ProductRow r && r.IsTotal) e.Cancel = true;
+        };
+
+        // После коммита правки — пересчёт (после применения биндинга)
+        dgProducts.CellEditEnding += (_, e) =>
+        {
+            if (e.EditAction != SWC.DataGridEditAction.Commit) return;
+            if (e.Row?.Item is not ProductRow r || r.IsTotal) return;
+            string? col = e.Column?.Header as string;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (col == "Частота")                         OnProductFrequencyChanged(r);
+                else if (col == "Цена (грн)" || col == "Кол-во") RecomputeProductRow(r);
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        };
     }
 
     // ══════════════════════════════════════════════════ WPF-ГРИДЫ ПОКУПОК
@@ -100,90 +127,8 @@ public partial class MainWindow
     // Заполняется в FillMenuTab() через коллекцию MenuRow (см. MenuRow.cs).
 
     // ══════════════════════════════════════════════════ ПРОДУКТЫ
-
-    private SWF.Panel CreateProductsTabPanel()
-    {
-        dgvProducts = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            AllowUserToAddRows = true,
-            AllowUserToDeleteRows = true,
-            AllowUserToResizeRows = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(44, 95, 45), ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.AliceBlue },
-            RowTemplate = { Height = 38 }
-        };
-        dgvProducts.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgvProducts.ColumnHeadersHeight = 42;
-        dgvProducts.EnableHeadersVisualStyles = false;
-
-        // Все столбцы используют FillWeight — растягиваются пропорционально ширине окна
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Продукт",      FillWeight = 26 });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Tier",        HeaderText = "Уровень",      FillWeight = 7,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter, Font = new SD.Font("Segoe UI", 12) } });
-
-        var colFreq = new SWF.DataGridViewComboBoxColumn
-        {
-            Name = "Frequency", HeaderText = "Частота", FillWeight = 12,
-            FlatStyle = SWF.FlatStyle.Flat,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter, Font = new SD.Font("Segoe UI", 12) }
-        };
-        colFreq.Items.AddRange("ежедневно", "еженедельно", "ежемесячно");
-        dgvProducts.Columns.Add(colFreq);
-
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Unit",      HeaderText = "Ед.",        FillWeight = 5 });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Price",     HeaderText = "Цена (грн)", FillWeight = 9 });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RealPrice", HeaderText = "Реал. цена", FillWeight = 9,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, Font = new SD.Font("Segoe UI", 12) } });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Qty",       HeaderText = "Кол-во",     FillWeight = 7 });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "PackInfo",  HeaderText = "Упаковок",   FillWeight = 11, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { ForeColor = SD.Color.MidnightBlue, Alignment = SWF.DataGridViewContentAlignment.MiddleCenter, Font = new SD.Font("Segoe UI", 12) } });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Sum",       HeaderText = "Сумма (грн)", FillWeight = 10, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { ForeColor = SD.Color.DarkGreen, Alignment = SWF.DataGridViewContentAlignment.MiddleRight } });
-        dgvProducts.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Kcal",      HeaderText = "Ккал/пер.",  FillWeight = 9,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { ForeColor = SD.Color.DarkBlue, Alignment = SWF.DataGridViewContentAlignment.MiddleRight } });
-
-        if (dgvProducts.Columns["Price"] != null) dgvProducts.Columns["Price"]!.DefaultCellStyle.Alignment = SWF.DataGridViewContentAlignment.MiddleRight;
-        if (dgvProducts.Columns["Qty"]   != null) dgvProducts.Columns["Qty"]!.DefaultCellStyle.Alignment   = SWF.DataGridViewContentAlignment.MiddleRight;
-        foreach (SWF.DataGridViewColumn col in dgvProducts.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-
-        dgvProducts.CellValueChanged  += DgvProducts_CellValueChanged;
-        dgvProducts.RowsRemoved       += (_, _) => UpdateProductsTotal();
-        dgvProducts.UserDeletingRow   += (s, e) => { if (e.Row?.Tag?.ToString() == "total") e.Cancel = true; };
-        dgvProducts.CurrentCellDirtyStateChanged += (s, e) =>
-        {
-            if (dgvProducts.IsCurrentCellDirty) dgvProducts.CommitEdit(SWF.DataGridViewDataErrorContexts.Commit);
-        };
-        dgvProducts.DataError += (s, e) => e.Cancel = true;
-
-        lblBudgetStatus = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Bottom, Height = 34,
-            TextAlign = System.Drawing.ContentAlignment.MiddleRight,
-            Font = new SD.Font("Segoe UI", 11, SD.FontStyle.Bold),
-            Padding = new System.Windows.Forms.Padding(0, 0, 12, 0),
-            BackColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.FixedSingle
-        };
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(dgvProducts);
-        panel.Controls.Add(lblBudgetStatus);
-        return panel;
-    }
-
+    // Переведена на нативный WPF DataGrid (dgProducts в MainWindow.xaml).
+    // Привязка/обработчики — InitProductsGrid(); заполнение — FillProductsTab() через ProductRow.
     // ══════════════════════════════════════════════════ ПОКУПКИ / НЕДЕЛЯ / МЕСЯЦ
     // Переведены на нативные WPF DataGrid (dgShopToday/Tomorrow/Weekly/Monthly в
     // MainWindow.xaml). Привязка и обработчики — InitShoppingGrids(); заполнение —
@@ -494,7 +439,7 @@ public partial class MainWindow
 
     private void FillProductsTab()
     {
-        dgvProducts.Rows.Clear();
+        products.Clear();
         decimal ratio = familyCount / 2m;
         int periodDays    = (int)(periodEnd - periodStart).TotalDays + 1;
         decimal periodScale  = periodDays / 30m;
@@ -545,9 +490,9 @@ public partial class MainWindow
 
             bool isMin   = MinimumBasket.ContainsKey(p.Name);
             bool isBasic = !isMin && BasicBasket.ContainsKey(p.Name);
-            string tierText  = isMin ? "Минимум" : isBasic ? "Базовый" : "Комфорт";
-            Color  tierColor = isMin ? SD.Color.Crimson : isBasic ? SD.Color.DarkOrange : SD.Color.DarkGreen;
-            Color  rowBg     = isMin ? SD.Color.FromArgb(255, 235, 235) : isBasic ? SD.Color.FromArgb(255, 252, 220) : SD.Color.FromArgb(235, 255, 235);
+            string tierText   = isMin ? "Минимум" : isBasic ? "Базовый" : "Комфорт";
+            var    tierBrush  = isMin ? WMedia.Brushes.Crimson : isBasic ? WMedia.Brushes.DarkOrange : WMedia.Brushes.DarkGreen;
+            var    rowBgBrush = isMin ? ProductBrushes.MinBg   : isBasic ? ProductBrushes.BasicBg    : ProductBrushes.ComfortBg;
 
             realPriceData.TryGetValue(p.Name, out var rp);
             var    rpMap  = priceMappings.FirstOrDefault(m2 => m2.AppProduct == p.Name);
@@ -555,65 +500,58 @@ public partial class MainWindow
             decimal realP = rp?.LastPrice > 0 ? rp.LastPrice / mult : rp?.Avg30d > 0 ? rp.Avg30d / mult : rp?.Avg90d > 0 ? rp.Avg90d / mult : 0;
             string realPStr = realP > 0 ? realP.ToString("F2") : "";
 
-            int rowIdx = dgvProducts.Rows.Add(
-                p.Name, tierText, p.Frequency, p.Unit, p.Price.ToString("F2"), realPStr,
-                qty > 0 ? qty.ToString("F2") : "", FormatPackInfo(p.Name, p.Unit, qty),
-                sum > 0 ? sum.ToString("F2") : "", kcal > 0 ? kcal.ToString("N0") : "");
-
-            var row = dgvProducts.Rows[rowIdx];
-            row.DefaultCellStyle.BackColor    = rowBg;
-            row.Cells["Tier"].Style.ForeColor = tierColor;
-            row.Cells["Tier"].Style.Font      = new SD.Font("Segoe UI", 10, SD.FontStyle.Bold);
+            System.Windows.Media.Brush realPriceBrush = WMedia.Brushes.Black;
             if (realP > 0)
             {
                 decimal diff = (realP - p.Price) / p.Price;
-                row.Cells["RealPrice"].Style.ForeColor = diff < -0.05m ? SD.Color.DarkGreen : diff > 0.05m ? SD.Color.Crimson : SD.Color.DarkOrange;
+                realPriceBrush = diff < -0.05m ? WMedia.Brushes.DarkGreen : diff > 0.05m ? WMedia.Brushes.Crimson : WMedia.Brushes.DarkOrange;
             }
+
+            products.Add(new ProductRow
+            {
+                ProductName = p.Name,
+                Tier        = tierText,
+                Frequency   = p.Frequency,
+                Unit        = p.Unit,
+                Price       = p.Price.ToString("F2"),
+                RealPrice   = realPStr,
+                Qty         = qty > 0 ? qty.ToString("F2") : "",
+                PackInfo    = FormatPackInfo(p.Name, p.Unit, qty),
+                Sum         = sum > 0 ? sum.ToString("F2") : "",
+                Kcal        = kcal > 0 ? kcal.ToString("N0") : "",
+                TierBrush      = tierBrush,
+                RowBg          = rowBgBrush,
+                RealPriceBrush = realPriceBrush,
+            });
         }
 
-        int totIdx = dgvProducts.Rows.Add("ИТОГО", "", "", "", "", "", "", "");
-        var totRow = dgvProducts.Rows[totIdx];
-        totRow.Tag = "total"; totRow.ReadOnly = true;
-        totRow.DefaultCellStyle.BackColor = SD.Color.FromArgb(30, 58, 30);
-        totRow.DefaultCellStyle.ForeColor = SD.Color.White;
-        totRow.DefaultCellStyle.Font      = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold);
-        totRow.Cells["Sum"].Style.ForeColor  = SD.Color.FromArgb(130, 230, 130);
-        totRow.Cells["Kcal"].Style.ForeColor = SD.Color.FromArgb(180, 220, 255);
-        totRow.Cells["Sum"].Style.Alignment  = SWF.DataGridViewContentAlignment.MiddleRight;
-        totRow.Cells["Kcal"].Style.Alignment = SWF.DataGridViewContentAlignment.MiddleRight;
+        products.Add(new ProductRow { ProductName = "ИТОГО", IsTotal = true });
         UpdateProductsTotal();
     }
 
-    private void DgvProducts_CellValueChanged(object? sender, SWF.DataGridViewCellEventArgs e)
+    // Изменили частоту покупки продукта → сохранить и перестроить недельный/месячный списки
+    private void OnProductFrequencyChanged(ProductRow r)
     {
-        if (e.RowIndex < 0) return;
-        var row = dgvProducts.Rows[e.RowIndex];
-        if (row.IsNewRow) return;
-        string? colName = dgvProducts.Columns[e.ColumnIndex]?.Name;
+        int idx = prices.FindIndex(x => x.Name.Equals(r.ProductName, StringComparison.OrdinalIgnoreCase));
+        if (idx >= 0) prices[idx] = prices[idx] with { Frequency = r.Frequency };
+        SavePrices();
+        FillWeeklyShoppingTab();
+        FillMonthlyShoppingTab();
+    }
 
-        if (colName == "Frequency")
+    // Пересчёт строки после правки «Цена»/«Кол-во»: привязка к упаковкам и потолку бюджета
+    private void RecomputeProductRow(ProductRow r)
+    {
+        if (!decimal.TryParse(r.Price, out decimal price) || price <= 0 ||
+            !decimal.TryParse(r.Qty,   out decimal qty)   || qty < 0)
         {
-            string freqProduct = row.Cells["ProductName"].Value?.ToString() ?? "";
-            string newFreq     = row.Cells["Frequency"].Value?.ToString()  ?? "еженедельно";
-            int idx = prices.FindIndex(x => x.Name.Equals(freqProduct, StringComparison.OrdinalIgnoreCase));
-            if (idx >= 0) prices[idx] = prices[idx] with { Frequency = newFreq };
-            SavePrices();
-            FillWeeklyShoppingTab();
-            FillMonthlyShoppingTab();
-            return;
-        }
-        if (colName != "Price" && colName != "Qty") return;
-
-        if (!decimal.TryParse(row.Cells["Price"].Value?.ToString(), out decimal price) || price <= 0 ||
-            !decimal.TryParse(row.Cells["Qty"].Value?.ToString(),   out decimal qty)   || qty < 0)
-        {
-            row.Cells["Sum"].Value = ""; row.Cells["Kcal"].Value = ""; row.Cells["PackInfo"].Value = "";
+            r.Sum = ""; r.Kcal = ""; r.PackInfo = "";
             UpdateProductsTotal(); return;
         }
 
-        string productName = row.Cells["ProductName"].Value?.ToString() ?? "";
-        string unit        = row.Cells["Unit"].Value?.ToString()        ?? "";
-        decimal otherTotal = ComputeTotalExcluding(e.RowIndex);
+        string productName = r.ProductName;
+        string unit        = r.Unit;
+        decimal otherTotal = ComputeTotalExcluding(r);
         decimal maxThisRow = Math.Max(0, PeriodBudget - otherTotal);
 
         if (PackStep.TryGetValue(productName, out decimal step) && step > 0 && qty > 0)
@@ -626,27 +564,22 @@ public partial class MainWindow
         if (propSum > maxThisRow) { qty = Math.Floor(maxThisRow / price * 100m) / 100m; propSum = Math.Round(price * qty, 2); }
 
         string qtyStr = qty.ToString("F2");
-        if (row.Cells["Qty"].Value?.ToString() != qtyStr)
-        {
-            dgvProducts.CellValueChanged -= DgvProducts_CellValueChanged;
-            row.Cells["Qty"].Value = qtyStr;
-            dgvProducts.CellValueChanged += DgvProducts_CellValueChanged;
-        }
-        row.Cells["Sum"].Value      = propSum.ToString("F2");
-        row.Cells["PackInfo"].Value = FormatPackInfo(productName, unit, qty);
+        if (r.Qty != qtyStr) r.Qty = qtyStr;
+        r.Sum      = propSum.ToString("F2");
+        r.PackInfo = FormatPackInfo(productName, unit, qty);
         if (UnitGrams.TryGetValue(unit, out decimal gPU) && CaloriesPer100g.TryGetValue(productName, out decimal cal100))
-            row.Cells["Kcal"].Value = ((int)Math.Round(qty * gPU * cal100 / 100m)).ToString("N0");
-        else row.Cells["Kcal"].Value = "";
+            r.Kcal = ((int)Math.Round(qty * gPU * cal100 / 100m)).ToString("N0");
+        else r.Kcal = "";
         UpdateProductsTotal();
     }
 
-    private decimal ComputeTotalExcluding(int excludeRowIndex)
+    private decimal ComputeTotalExcluding(ProductRow exclude)
     {
         decimal total = 0;
-        foreach (SWF.DataGridViewRow row in dgvProducts.Rows)
+        foreach (var row in products)
         {
-            if (row.IsNewRow || row.Index == excludeRowIndex || row.Tag?.ToString() == "total") continue;
-            if (decimal.TryParse(row.Cells["Sum"].Value?.ToString(), out decimal s)) total += s;
+            if (row == exclude || row.IsTotal) continue;
+            if (decimal.TryParse(row.Sum, out decimal s)) total += s;
         }
         return total;
     }
@@ -654,19 +587,18 @@ public partial class MainWindow
     private void UpdateProductsTotal()
     {
         decimal total = 0; long totalKcal = 0;
-        SWF.DataGridViewRow? totRow = null;
-        foreach (SWF.DataGridViewRow row in dgvProducts.Rows)
+        ProductRow? totRow = null;
+        foreach (var row in products)
         {
-            if (row.IsNewRow) continue;
-            if (row.Tag?.ToString() == "total") { totRow = row; continue; }
-            if (decimal.TryParse(row.Cells["Sum"].Value?.ToString(), out decimal s)) total += s;
-            string rawK = new string((row.Cells["Kcal"].Value?.ToString() ?? "").Where(char.IsDigit).ToArray());
+            if (row.IsTotal) { totRow = row; continue; }
+            if (decimal.TryParse(row.Sum, out decimal s)) total += s;
+            string rawK = new string((row.Kcal ?? "").Where(char.IsDigit).ToArray());
             if (long.TryParse(rawK, out long k)) totalKcal += k;
         }
         if (totRow != null)
         {
-            totRow.Cells["Sum"].Value  = total > 0 ? total.ToString("F2") : "";
-            totRow.Cells["Kcal"].Value = totalKcal > 0 ? totalKcal.ToString("N0") : "";
+            totRow.Sum  = total > 0 ? total.ToString("F2") : "";
+            totRow.Kcal = totalKcal > 0 ? totalKcal.ToString("N0") : "";
         }
 
         decimal budget = PeriodBudget, remaining = budget - total;
@@ -674,18 +606,18 @@ public partial class MainWindow
 
         if (total <= budget)
         {
-            lblBudgetStatus.Text      = $"  ✓ Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  Остаток: {remaining:N0} грн";
-            lblBudgetStatus.ForeColor = SD.Color.DarkGreen;
+            lblBudgetStatus.Text       = $"  ✓ Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  Остаток: {remaining:N0} грн";
+            lblBudgetStatus.Foreground = WMedia.Brushes.DarkGreen;
         }
         else if (overPct < 5m)
         {
-            lblBudgetStatus.Text      = $"  📦 Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  +{-remaining:N0} грн (округл.)";
-            lblBudgetStatus.ForeColor = SD.Color.DarkOrange;
+            lblBudgetStatus.Text       = $"  📦 Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  +{-remaining:N0} грн (округл.)";
+            lblBudgetStatus.Foreground = WMedia.Brushes.DarkOrange;
         }
         else
         {
-            lblBudgetStatus.Text      = $"  ⚠ Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  Превышение на {-remaining:N0} грн!";
-            lblBudgetStatus.ForeColor = SD.Color.Crimson;
+            lblBudgetStatus.Text       = $"  ⚠ Итого: {total:N0} грн  |  Бюджет: {budget:N0} грн  |  Превышение на {-remaining:N0} грн!";
+            lblBudgetStatus.Foreground = WMedia.Brushes.Crimson;
         }
     }
 

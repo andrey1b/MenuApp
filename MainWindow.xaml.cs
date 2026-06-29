@@ -85,6 +85,7 @@ public partial class MainWindow : Window
         InitWinFormsHosts();
         InitShoppingGrids();
         InitShoppingListTab();
+        InitProductsGrid();
         LoadData();
         PopulateShoppingList();   // список продуктов для вкладки «Составить список» (после загрузки prices)
         UpdateBudgetLabel();

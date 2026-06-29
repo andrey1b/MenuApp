@@ -186,7 +186,82 @@
                 </DataGrid>
             </TabItem>
             <TabItem Header="  Продукты  ">
-                <Grid x:Name="ProductsHost"/>
+                <DockPanel>
+                    <Border DockPanel.Dock="Bottom" Background="White" BorderBrush="#A0A0A0" BorderThickness="0,1,0,0" Height="34">
+                        <TextBlock x:Name="lblBudgetStatus" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Margin="0,0,12,0" FontWeight="Bold" FontSize="12"/>
+                    </Border>
+                    <DataGrid x:Name="dgProducts" Style="{StaticResource GridBase}" IsReadOnly="False"
+                              RowStyle="{StaticResource ProductRowStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Продукт" Width="26*" Binding="{Binding ProductName}" ElementStyle="{StaticResource CellLeft}"/>
+                            <DataGridTextColumn Header="Уровень" Width="8*" IsReadOnly="True" Binding="{Binding Tier}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment"   Value="Center"/>
+                                        <Setter Property="FontWeight"          Value="Bold"/>
+                                        <Setter Property="FontSize"            Value="12"/>
+                                        <Setter Property="Foreground"          Value="{Binding TierBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridComboBoxColumn x:Name="colFreq" Header="Частота" Width="13*" SelectedItemBinding="{Binding Frequency}">
+                                <DataGridComboBoxColumn.ElementStyle>
+                                    <Style TargetType="ComboBox">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridComboBoxColumn.ElementStyle>
+                            </DataGridComboBoxColumn>
+                            <DataGridTextColumn Header="Ед."        Width="6*"  Binding="{Binding Unit}"  ElementStyle="{StaticResource CellCenter}"/>
+                            <DataGridTextColumn Header="Цена (грн)" Width="9*"  Binding="{Binding Price}" ElementStyle="{StaticResource CellRight}"/>
+                            <DataGridTextColumn Header="Реал. цена" Width="9*" IsReadOnly="True" Binding="{Binding RealPrice}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="Foreground" Value="{Binding RealPriceBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Кол-во" Width="7*" Binding="{Binding Qty}" ElementStyle="{StaticResource CellRight}"/>
+                            <DataGridTextColumn Header="Упаковок" Width="11*" IsReadOnly="True" Binding="{Binding PackInfo}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenter}">
+                                        <Setter Property="Foreground" Value="MidnightBlue"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Сумма (грн)" Width="10*" IsReadOnly="True" Binding="{Binding Sum}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="Foreground" Value="DarkGreen"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                                                <Setter Property="Foreground" Value="#82E682"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Ккал/пер." Width="9*" IsReadOnly="True" Binding="{Binding Kcal}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="Foreground" Value="DarkBlue"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                                                <Setter Property="Foreground" Value="#B4DCFF"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
             </TabItem>
             <TabItem Header="  Покупки  ">
                 <Grid Background="WhiteSmoke">
