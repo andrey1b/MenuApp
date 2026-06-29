@@ -146,6 +146,8 @@ public partial class MainWindow
 
     private SWF.Panel BuildAiScrollArea()
     {
+        const int RowH = 130;
+
         var scroll = new SWF.Panel
         {
             Dock = SWF.DockStyle.Fill,
@@ -156,28 +158,30 @@ public partial class MainWindow
         var table = new SWF.TableLayoutPanel
         {
             ColumnCount = 3, RowCount = AiList.Length,
-            AutoSize = true, AutoSizeMode = SWF.AutoSizeMode.GrowAndShrink,
-            BackColor = SD.Color.Transparent,
-            Padding = new SWF.Padding(6, 6, 6, 6)
+            BackColor   = SD.Color.Transparent,
+            Padding     = new SWF.Padding(6),
+            Left = 0, Top = 0,
+            Height = AiList.Length * RowH + 12
         };
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 158));
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 148));
+        // 20% кнопка ИИ | 60% текстбокс | 20% чекбокс+сохранить
+        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 20));
+        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 60));
+        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 20));
         for (int i = 0; i < AiList.Length; i++)
-            table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 130));
+            table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, RowH));
 
         for (int i = 0; i < AiList.Length; i++)
         {
-            int   idx = i;
-            var (name, url, _) = AiList[i];
+            int   idx        = i;
+            var  (name, url, _) = AiList[i];
 
-            // Кнопка с названием ИИ
+            // Кнопка с названием ИИ (20%)
             var btnAi = new SWF.Button
             {
                 Text      = name,
                 Dock      = SWF.DockStyle.Fill,
                 Margin    = new SWF.Padding(6, 6, 4, 6),
-                Font      = new SD.Font("Segoe UI", 14, SD.FontStyle.Bold),
+                Font      = new SD.Font("Segoe UI", 15, SD.FontStyle.Bold),
                 BackColor = AiButtonColors[i], ForeColor = SD.Color.White,
                 FlatStyle = SWF.FlatStyle.Flat,
                 Cursor    = SWF.Cursors.Hand
@@ -186,7 +190,7 @@ public partial class MainWindow
             btnAi.Click += (_, _) =>
                 Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
 
-            // Текстбокс ответа
+            // Текстбокс ответа (60%)
             txAiResponse[i] = new SWF.RichTextBox
             {
                 Dock        = SWF.DockStyle.Fill,
@@ -199,19 +203,19 @@ public partial class MainWindow
                 BorderStyle = SWF.BorderStyle.FixedSingle
             };
 
-            // Правая панель: чекбокс + кнопка сохранить
+            // Правая панель 20%: чекбокс + кнопка «Сохранить»
             var right = new SWF.Panel { Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 6, 6) };
 
             cbAiEnabled[i] = new SWF.CheckBox
             {
-                Text = "Включить", Left = 6, Top = 12, Width = 130, Height = 32,
+                Text = "Включить", Left = 6, Top = 10, Height = 30, AutoSize = false,
                 Font = new SD.Font("Segoe UI", 12), Checked = true,
                 ForeColor = SD.Color.FromArgb(30, 70, 30)
             };
 
             var btnSave = new SWF.Button
             {
-                Text = "💾  Сохранить", Left = 4, Top = 52, Width = 136, Height = 38,
+                Text = "💾  Сохранить", Left = 4, Top = 48, Height = 40,
                 Font = new SD.Font("Segoe UI", 11),
                 BackColor = SD.Color.FromArgb(200, 228, 200), ForeColor = SD.Color.FromArgb(30, 70, 30),
                 FlatStyle = SWF.FlatStyle.Flat
@@ -219,15 +223,27 @@ public partial class MainWindow
             btnSave.FlatAppearance.BorderSize = 1;
             btnSave.Click += (_, _) => SaveSingleResponse(idx);
 
+            // Ширина кнопки и чекбокса — по ширине правой панели
+            right.Resize += (_, _) =>
+            {
+                cbAiEnabled[idx].Width = right.ClientSize.Width - 10;
+                btnSave.Width          = right.ClientSize.Width - 8;
+            };
+
             right.Controls.AddRange(new SWF.Control[] { cbAiEnabled[i], btnSave });
 
-            table.Controls.Add(btnAi,          0, i);
+            table.Controls.Add(btnAi,           0, i);
             table.Controls.Add(txAiResponse[i], 1, i);
-            table.Controls.Add(right,           2, i);
+            table.Controls.Add(right,            2, i);
         }
 
-        scroll.Resize += (_, _) => { if (table.IsHandleCreated) table.Width = scroll.ClientSize.Width - 4; };
+        // Растягиваем таблицу по ширине scroll-панели
+        scroll.Resize += (_, _) => table.Width = scroll.ClientSize.Width;
         scroll.Controls.Add(table);
+
+        // Первоначальный размер после создания хэндла
+        scroll.HandleCreated += (_, _) => table.Width = scroll.ClientSize.Width;
+
         return scroll;
     }
 
