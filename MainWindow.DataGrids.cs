@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using SWF   = System.Windows.Forms;
-using SWFI  = System.Windows.Forms.Integration;
-using SWC   = System.Windows.Controls;
-using SD    = System.Drawing;
+using SWF    = System.Windows.Forms;
+using SWFI   = System.Windows.Forms.Integration;
+using SWC    = System.Windows.Controls;
+using SD     = System.Drawing;
+using WMedia = System.Windows.Media;
 
 namespace MenuApp;
 
@@ -20,19 +22,16 @@ public partial class MainWindow
 
     private SWF.DataGridView dgvProducts      = null!;
     private SWF.Label        lblBudgetStatus  = null!;
-    private SWF.DataGridView dgvShoppingToday    = null!;
-    private SWF.DataGridView dgvShoppingTomorrow = null!;
-    private SWF.Label        lblTodayTitle    = null!;
-    private SWF.Label        lblTomorrowTitle = null!;
-    private SWF.DataGridView dgvShoppingWeekly  = null!;
-    private SWF.DataGridView dgvShoppingMonthly = null!;
-    private SWF.Label        lblWeeklyTitle = null!;
-    private SWF.Label        lblMonthlyTitle = null!;
-    private SWF.Label        lblWeeklyInfo  = null!;
-    private SWF.Label        lblMonthlyInfo = null!;
     private SWF.DataGridView dgvRealPrices   = null!;
     private SWF.Label        lblRealStatus   = null!;
     private SWF.DataGridViewComboBoxColumn colExcelName = null!;
+
+    // Списки покупок переведены на WPF DataGrid (dgShop* в MainWindow.xaml);
+    // данные хранятся в коллекциях ShoppingRow.
+    private readonly ObservableCollection<ShoppingRow> shopToday    = new();
+    private readonly ObservableCollection<ShoppingRow> shopTomorrow = new();
+    private readonly ObservableCollection<ShoppingRow> shopWeekly   = new();
+    private readonly ObservableCollection<ShoppingRow> shopMonthly  = new();
 
     private List<MealDay>   mealPlan = new();
     private List<PriceItem> prices   = new();
@@ -59,12 +58,42 @@ public partial class MainWindow
         }
 
         AddHost(ProductsHost,   CreateProductsTabPanel());
-        AddHost(ShoppingHost,   CreateShoppingTabPanel());
-        AddHost(WeeklyHost,     CreateWeeklyTabPanel());
-        AddHost(MonthlyHost,    CreateMonthlyTabPanel());
         AddHost(RealPricesHost,   CreateRealPricesTabPanel());
         AddHost(ShoppingListHost, CreateShoppingListPanel());
         AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
+    }
+
+    // ══════════════════════════════════════════════════ WPF-ГРИДЫ ПОКУПОК
+
+    // Привязка коллекций и обработчиков к WPF-гридам списков покупок (вызывать после InitializeComponent)
+    internal void InitShoppingGrids()
+    {
+        void Wire(SWC.DataGrid dg, SWC.Button copyBtn, Func<string> titleGetter)
+        {
+            // В строке ИТОГО редактирование запрещено
+            dg.BeginningEdit += (_, e) =>
+            {
+                if (e.Row?.Item is ShoppingRow r && r.IsTotal) e.Cancel = true;
+            };
+            // После правки «Заплачено» — пересчёт итога и сохранение (после коммита биндинга)
+            dg.CellEditEnding += (_, e) =>
+            {
+                if (e.EditAction == SWC.DataGridEditAction.Commit && (e.Column?.Header as string) == "Заплачено")
+                    Dispatcher.BeginInvoke(new Action(() => UpdateShoppingPaidTotal(dg)),
+                                           System.Windows.Threading.DispatcherPriority.Background);
+            };
+            copyBtn.Click += (_, _) => CopyShoppingListToClipboard(dg, titleGetter());
+        }
+
+        Wire(dgShopToday,    btnCopyToday,    () => lblTodayTitle.Text);
+        Wire(dgShopTomorrow, btnCopyTomorrow, () => lblTomorrowTitle.Text);
+        Wire(dgShopWeekly,   btnCopyWeekly,   () => lblWeeklyTitle.Text);
+        Wire(dgShopMonthly,  btnCopyMonthly,  () => lblMonthlyTitle.Text);
+
+        dgShopToday.ItemsSource    = shopToday;
+        dgShopTomorrow.ItemsSource = shopTomorrow;
+        dgShopWeekly.ItemsSource   = shopWeekly;
+        dgShopMonthly.ItemsSource  = shopMonthly;
     }
 
     // ══════════════════════════════════════════════════ МЕНЮ
@@ -156,265 +185,10 @@ public partial class MainWindow
         return panel;
     }
 
-    // ══════════════════════════════════════════════════ ПОКУПКИ
-
-    private SWF.Panel CreateShoppingTabPanel()
-    {
-        var table = new SWF.TableLayoutPanel
-        {
-            Dock = SWF.DockStyle.Fill,
-            ColumnCount = 2, RowCount = 1,
-            BackColor = SD.Color.WhiteSmoke
-        };
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 50f));
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 50f));
-        table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100f));
-
-        var (panelToday,    gridToday,    titleToday)    = BuildShoppingPanel(SD.Color.FromArgb(255, 251, 214));
-        var (panelTomorrow, gridTomorrow, titleTomorrow) = BuildShoppingPanel(SD.Color.FromArgb(214, 241, 214));
-
-        dgvShoppingToday    = gridToday;
-        dgvShoppingTomorrow = gridTomorrow;
-        lblTodayTitle       = titleToday;
-        lblTomorrowTitle    = titleTomorrow;
-
-        table.Controls.Add(panelToday,    0, 0);
-        table.Controls.Add(panelTomorrow, 1, 0);
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(table);
-        return panel;
-    }
-
-    private (SWF.Panel panel, SWF.DataGridView dgv, SWF.Label title) BuildShoppingPanel(Color titleColor)
-    {
-        var title = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Top, Height = 52,
-            TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = titleColor,
-            ForeColor = SD.Color.DarkSlateGray
-        };
-
-        var dgv = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            AllowUserToAddRows = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(62, 135, 65), ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.FromArgb(240, 248, 240) },
-            RowTemplate = { Height = 38 }
-        };
-        dgv.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgv.ColumnHeadersHeight = 42;
-        dgv.EnableHeadersVisualStyles = false;
-
-        dgv.Columns.Add(new SWF.DataGridViewCheckBoxColumn { Name = "Done", HeaderText = "✓", Width = 40, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "Product",  HeaderText = "Продукт",   FillWeight = 50, ReadOnly = true });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "Quantity", HeaderText = "Количество", FillWeight = 28, ReadOnly = true });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "Price",    HeaderText = "~Цена (грн)", FillWeight = 22, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight } });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "Paid",     HeaderText = "Заплачено", FillWeight = 22, ReadOnly = false,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, BackColor = SD.Color.FromArgb(255, 255, 230) } });
-
-        foreach (SWF.DataGridViewColumn col in dgv.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-
-        dgv.CurrentCellDirtyStateChanged += (s, e) =>
-        {
-            if (dgv.IsCurrentCellDirty && dgv.CurrentCell is SWF.DataGridViewCheckBoxCell)
-                dgv.CommitEdit(SWF.DataGridViewDataErrorContexts.Commit);
-        };
-        dgv.CellValueChanged += (s, e) =>
-        {
-            if (e.RowIndex < 0) return;
-            int doneIdx = dgv.Columns["Done"]?.Index ?? -1;
-            int paidIdx = dgv.Columns["Paid"]?.Index ?? -1;
-            if (e.ColumnIndex == doneIdx)
-            {
-                bool done  = dgv.Rows[e.RowIndex].Cells["Done"].Value is true;
-                var style  = dgv.Rows[e.RowIndex].DefaultCellStyle;
-                style.ForeColor = done ? SD.Color.Gray : SD.Color.Empty;
-                style.Font      = done ? new SD.Font("Segoe UI", 13, SD.FontStyle.Strikeout) : null;
-                dgv.InvalidateRow(e.RowIndex);
-            }
-            else if (e.ColumnIndex == paidIdx) UpdateShoppingPaidTotal(dgv);
-        };
-
-        var btnCopy = new SWF.Button
-        {
-            Text = "📋", Width = 30, Height = 30,
-            Anchor = SWF.AnchorStyles.Top | SWF.AnchorStyles.Right,
-            FlatStyle = SWF.FlatStyle.Flat, BackColor = SD.Color.Transparent,
-            ForeColor = SD.Color.DarkSlateGray, Font = new SD.Font("Segoe UI", 12),
-            Cursor = SWF.Cursors.Hand
-        };
-        btnCopy.FlatAppearance.BorderSize = 0;
-        btnCopy.Click += (_, _) => CopyShoppingListToClipboard(dgv, title.Text);
-        title.Controls.Add(btnCopy);
-        title.Resize += (_, _) => btnCopy.Location = new System.Drawing.Point(title.Width - 34, 2);
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill, Padding = new SWF.Padding(4) };
-        panel.Controls.Add(dgv);
-        panel.Controls.Add(title);
-        return (panel, dgv, title);
-    }
-
-    // ══════════════════════════════════════════════════ ПОКУПКИ НА НЕДЕЛЮ
-
-    private SWF.Panel CreateWeeklyTabPanel()
-    {
-        lblWeeklyTitle = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Top, Height = 50,
-            TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = SD.Color.FromArgb(200, 228, 200),
-            ForeColor = SD.Color.DarkSlateGray
-        };
-        lblWeeklyInfo = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Bottom, Height = 42,
-            TextAlign = System.Drawing.ContentAlignment.MiddleRight,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            Padding = new SWF.Padding(0, 0, 12, 0),
-            BackColor = SD.Color.FromArgb(210, 236, 210),
-            BorderStyle = SWF.BorderStyle.FixedSingle
-        };
-
-        dgvShoppingWeekly = BuildPeriodicShoppingGrid();
-
-        var btnCopy = new SWF.Button
-        {
-            Text = "📋", Width = 30, Height = 30, Anchor = SWF.AnchorStyles.Top | SWF.AnchorStyles.Right,
-            FlatStyle = SWF.FlatStyle.Flat, BackColor = SD.Color.Transparent, ForeColor = SD.Color.DarkSlateGray,
-            Font = new SD.Font("Segoe UI", 12), Cursor = SWF.Cursors.Hand
-        };
-        btnCopy.FlatAppearance.BorderSize = 0;
-        btnCopy.Click += (_, _) => CopyShoppingListToClipboard(dgvShoppingWeekly, lblWeeklyTitle.Text);
-        lblWeeklyTitle.Controls.Add(btnCopy);
-        lblWeeklyTitle.Resize += (_, _) => btnCopy.Location = new System.Drawing.Point(lblWeeklyTitle.Width - 34, 3);
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(dgvShoppingWeekly);
-        panel.Controls.Add(lblWeeklyTitle);
-        panel.Controls.Add(lblWeeklyInfo);
-        return panel;
-    }
-
-    // ══════════════════════════════════════════════════ ПОКУПКИ НА МЕСЯЦ
-
-    private SWF.Panel CreateMonthlyTabPanel()
-    {
-        lblMonthlyTitle = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Top, Height = 50,
-            TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = SD.Color.FromArgb(214, 245, 225),
-            ForeColor = SD.Color.DarkSlateGray
-        };
-        lblMonthlyInfo = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Bottom, Height = 42,
-            TextAlign = System.Drawing.ContentAlignment.MiddleRight,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            Padding = new SWF.Padding(0, 0, 12, 0),
-            BackColor = SD.Color.FromArgb(220, 255, 235),
-            BorderStyle = SWF.BorderStyle.FixedSingle
-        };
-
-        dgvShoppingMonthly = BuildPeriodicShoppingGrid();
-
-        var btnCopy = new SWF.Button
-        {
-            Text = "📋", Width = 30, Height = 30, Anchor = SWF.AnchorStyles.Top | SWF.AnchorStyles.Right,
-            FlatStyle = SWF.FlatStyle.Flat, BackColor = SD.Color.Transparent, ForeColor = SD.Color.DarkSlateGray,
-            Font = new SD.Font("Segoe UI", 12), Cursor = SWF.Cursors.Hand
-        };
-        btnCopy.FlatAppearance.BorderSize = 0;
-        btnCopy.Click += (_, _) => CopyShoppingListToClipboard(dgvShoppingMonthly, lblMonthlyTitle.Text);
-        lblMonthlyTitle.Controls.Add(btnCopy);
-        lblMonthlyTitle.Resize += (_, _) => btnCopy.Location = new System.Drawing.Point(lblMonthlyTitle.Width - 34, 3);
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(dgvShoppingMonthly);
-        panel.Controls.Add(lblMonthlyTitle);
-        panel.Controls.Add(lblMonthlyInfo);
-        return panel;
-    }
-
-    private SWF.DataGridView BuildPeriodicShoppingGrid()
-    {
-        var dgv = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            AllowUserToAddRows = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(62, 135, 65), ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.FromArgb(240, 248, 240) },
-            RowTemplate = { Height = 40 }
-        };
-        dgv.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgv.ColumnHeadersHeight = 42;
-        dgv.EnableHeadersVisualStyles = false;
-
-        dgv.Columns.Add(new SWF.DataGridViewCheckBoxColumn { Name = "Done", HeaderText = "✓", Width = 40, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Product",  HeaderText = "Продукт",    FillWeight = 40, ReadOnly = true });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Quantity", HeaderText = "Количество",  FillWeight = 28, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter } });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Price", HeaderText = "~Цена (грн)", FillWeight = 20, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight } });
-        dgv.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Paid", HeaderText = "Заплачено", FillWeight = 20, ReadOnly = false,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, BackColor = SD.Color.FromArgb(255, 255, 230) } });
-
-        foreach (SWF.DataGridViewColumn col in dgv.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-
-        dgv.CurrentCellDirtyStateChanged += (s, e) =>
-        {
-            if (dgv.IsCurrentCellDirty && dgv.CurrentCell is SWF.DataGridViewCheckBoxCell)
-                dgv.CommitEdit(SWF.DataGridViewDataErrorContexts.Commit);
-        };
-        dgv.CellValueChanged += (s, e) =>
-        {
-            if (e.RowIndex < 0) return;
-            int doneIdx = dgv.Columns["Done"]?.Index ?? -1;
-            int paidIdx = dgv.Columns["Paid"]?.Index ?? -1;
-            if (e.ColumnIndex == doneIdx)
-            {
-                bool done = dgv.Rows[e.RowIndex].Cells["Done"].Value is true;
-                var style = dgv.Rows[e.RowIndex].DefaultCellStyle;
-                style.ForeColor = done ? SD.Color.Gray : SD.Color.Empty;
-                style.Font      = done ? new SD.Font("Segoe UI", 13, SD.FontStyle.Strikeout) : null;
-                dgv.InvalidateRow(e.RowIndex);
-            }
-            else if (e.ColumnIndex == paidIdx) UpdateShoppingPaidTotal(dgv);
-        };
-
-        return dgv;
-    }
+    // ══════════════════════════════════════════════════ ПОКУПКИ / НЕДЕЛЯ / МЕСЯЦ
+    // Переведены на нативные WPF DataGrid (dgShopToday/Tomorrow/Weekly/Monthly в
+    // MainWindow.xaml). Привязка и обработчики — InitShoppingGrids(); заполнение —
+    // FillShoppingDay / FillWeeklyShoppingTab / FillMonthlyShoppingTab через ShoppingRow.
 
     // ══════════════════════════════════════════════════ РЕАЛЬНЫЕ ЦЕНЫ
 
@@ -922,18 +696,18 @@ public partial class MainWindow
     {
         DateTime d1 = periodStart, d2 = periodStart.AddDays(1);
         bool isToday = d1.Date == DateTime.Today;
-        FillShoppingDay(d1, dgvShoppingToday,    lblTodayTitle,    isToday ? "Сегодня"   : "1-й день периода");
-        FillShoppingDay(d2, dgvShoppingTomorrow, lblTomorrowTitle, isToday ? "Завтра"    : "2-й день периода");
+        FillShoppingDay(d1, shopToday,    dgShopToday,    lblTodayTitle,    isToday ? "Сегодня" : "1-й день периода");
+        FillShoppingDay(d2, shopTomorrow, dgShopTomorrow, lblTomorrowTitle, isToday ? "Завтра"  : "2-й день периода");
     }
 
-    private void FillShoppingDay(DateTime date, SWF.DataGridView dgv, SWF.Label title, string prefix)
+    private void FillShoppingDay(DateTime date, ObservableCollection<ShoppingRow> rows, SWC.DataGrid dg, SWC.TextBlock title, string prefix)
     {
         var culture = new CultureInfo("ru-RU");
         title.Text  = $"{prefix} — {date.ToString("dddd, d MMMM", culture)}";
-        dgv.Rows.Clear();
+        rows.Clear();
 
         MealDay? meal = FindMealForDate(date);
-        if (meal == null) { dgv.Rows.Add(false, "(нет данных для этой даты)", "", ""); return; }
+        if (meal == null) { rows.Add(new ShoppingRow { Product = "(нет данных для этой даты)" }); return; }
 
         var agg = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         foreach (string mealText in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
@@ -948,30 +722,21 @@ public partial class MainWindow
             string qty = grams >= 1000 ? $"{grams / 1000:F2} кг" : $"{(int)grams} г";
             decimal est = EstimatePrice(name, grams);
             dayTotal += est;
-            dgv.Rows.Add(false, name, qty, est > 0 ? $"~{est:F0}" : "");
+            rows.Add(new ShoppingRow { Product = name, Quantity = qty, Price = est > 0 ? $"~{est:F0}" : "" });
         }
 
-        int totIdx = dgv.Rows.Add(false, "ИТОГО", "", dayTotal > 0 ? $"~{dayTotal:F0}" : "", "");
-        var totRow = dgv.Rows[totIdx];
-        totRow.Tag = "total"; totRow.ReadOnly = true;
-        totRow.Cells["Done"].ReadOnly = true;
-        totRow.DefaultCellStyle.BackColor = SD.Color.FromArgb(30, 58, 30);
-        totRow.DefaultCellStyle.ForeColor = SD.Color.White;
-        totRow.DefaultCellStyle.Font      = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold);
-        totRow.Cells["Price"].Style.ForeColor = SD.Color.FromArgb(160, 160, 160);
-        totRow.Cells["Paid"].Style.ForeColor  = SD.Color.FromArgb(130, 230, 130);
-        totRow.Cells["Paid"].Style.BackColor  = SD.Color.FromArgb(30, 58, 30);
+        rows.Add(new ShoppingRow { Product = "ИТОГО", Price = dayTotal > 0 ? $"~{dayTotal:F0}" : "", IsTotal = true });
 
         string dateKey = date.ToString("yyyy-MM-dd");
-        dgv.Tag = $"daily:{dateKey}";
-        RestorePaidValues(dgv, "daily", dateKey);
+        dg.Tag = $"daily:{dateKey}";
+        RestorePaidValues(dg, "daily", dateKey);
     }
 
     private void FillWeeklyShoppingTab()
     {
         DateTime weekEnd = periodStart.AddDays(6);
         lblWeeklyTitle.Text = $"Покупки на неделю:  {periodStart:d MMMM} — {weekEnd:d MMMM yyyy}  ({familyCount} чел.)";
-        dgvShoppingWeekly.Rows.Clear();
+        shopWeekly.Clear();
         decimal ratio = familyCount / 2m, total = 0;
         foreach (var p in prices.Where(p => p.Frequency == "еженедельно"))
         {
@@ -981,22 +746,22 @@ public partial class MainWindow
             if (snap <= 0) snap = Math.Round(rawQty, 2);
             var (qtyStr, cost) = GetRealQtyAndCost(p.Name, p.Unit, snap, p.Price);
             total += cost;
-            dgvShoppingWeekly.Rows.Add(false, p.Name, qtyStr, $"~{cost:F0}", "");
+            shopWeekly.Add(new ShoppingRow { Product = p.Name, Quantity = qtyStr, Price = $"~{cost:F0}" });
         }
-        AddPeriodicTotalRow(dgvShoppingWeekly, total);
+        AddPeriodicTotalRow(shopWeekly, total);
         string weekKey = periodStart.ToString("yyyy-MM-dd");
-        dgvShoppingWeekly.Tag = $"weekly:{weekKey}";
-        RestorePaidValues(dgvShoppingWeekly, "weekly", weekKey);
+        dgShopWeekly.Tag = $"weekly:{weekKey}";
+        RestorePaidValues(dgShopWeekly, "weekly", weekKey);
         decimal weekBudget = Math.Round(monthlyBudget / 4m, 0);
-        lblWeeklyInfo.Text      = $"  {(total <= weekBudget ? "✓" : "⚠")} Итого на неделю: ~{total:N0} грн  |  ~¼ бюджета: {weekBudget:N0} грн  ";
-        lblWeeklyInfo.ForeColor = total <= weekBudget ? SD.Color.DarkGreen : SD.Color.Crimson;
+        lblWeeklyInfo.Text       = $"  {(total <= weekBudget ? "✓" : "⚠")} Итого на неделю: ~{total:N0} грн  |  ~¼ бюджета: {weekBudget:N0} грн  ";
+        lblWeeklyInfo.Foreground = total <= weekBudget ? WMedia.Brushes.DarkGreen : WMedia.Brushes.Crimson;
     }
 
     private void FillMonthlyShoppingTab()
     {
         DateTime monthEnd = periodStart.AddDays(29);
         lblMonthlyTitle.Text = $"Покупки на месяц:  {periodStart:d MMMM} — {monthEnd:d MMMM yyyy}  ({familyCount} чел.)";
-        dgvShoppingMonthly.Rows.Clear();
+        shopMonthly.Clear();
         decimal ratio = familyCount / 2m, total = 0;
         foreach (var p in prices.Where(p => p.Frequency == "ежемесячно"))
         {
@@ -1006,14 +771,14 @@ public partial class MainWindow
             if (snap <= 0) snap = Math.Round(rawQty, 2);
             var (qtyStr, cost) = GetRealQtyAndCost(p.Name, p.Unit, snap, p.Price);
             total += cost;
-            dgvShoppingMonthly.Rows.Add(false, p.Name, qtyStr, $"~{cost:F0}", "");
+            shopMonthly.Add(new ShoppingRow { Product = p.Name, Quantity = qtyStr, Price = $"~{cost:F0}" });
         }
-        AddPeriodicTotalRow(dgvShoppingMonthly, total);
+        AddPeriodicTotalRow(shopMonthly, total);
         string monthKey = periodStart.ToString("yyyy-MM-dd");
-        dgvShoppingMonthly.Tag = $"monthly:{monthKey}";
-        RestorePaidValues(dgvShoppingMonthly, "monthly", monthKey);
-        lblMonthlyInfo.Text      = $"  {(total <= monthlyBudget ? "✓" : "⚠")} Итого на месяц: ~{total:N0} грн  |  Бюджет: {monthlyBudget:N0} грн  ";
-        lblMonthlyInfo.ForeColor = total <= monthlyBudget ? SD.Color.DarkGreen : SD.Color.Crimson;
+        dgShopMonthly.Tag = $"monthly:{monthKey}";
+        RestorePaidValues(dgShopMonthly, "monthly", monthKey);
+        lblMonthlyInfo.Text       = $"  {(total <= monthlyBudget ? "✓" : "⚠")} Итого на месяц: ~{total:N0} грн  |  Бюджет: {monthlyBudget:N0} грн  ";
+        lblMonthlyInfo.Foreground = total <= monthlyBudget ? WMedia.Brushes.DarkGreen : WMedia.Brushes.Crimson;
     }
 
     // ══════════════════════════════════════════════════ РЕАЛЬНЫЕ ЦЕНЫ
@@ -1155,35 +920,34 @@ public partial class MainWindow
 
     // ══════════════════════════════════════════════════ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
 
-    private static void AddPeriodicTotalRow(SWF.DataGridView dgv, decimal estimatedTotal)
+    private static void AddPeriodicTotalRow(ObservableCollection<ShoppingRow> rows, decimal estimatedTotal)
     {
-        int ti = dgv.Rows.Add(false, "ИТОГО", "", estimatedTotal > 0 ? $"~{estimatedTotal:F0}" : "", "");
-        var tr = dgv.Rows[ti];
-        tr.Tag = "total"; tr.ReadOnly = true;
-        tr.DefaultCellStyle.BackColor = SD.Color.FromArgb(30, 58, 30);
-        tr.DefaultCellStyle.ForeColor = SD.Color.White;
-        tr.DefaultCellStyle.Font      = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold);
-        tr.Cells["Price"].Style.ForeColor = SD.Color.FromArgb(160, 160, 160);
-        tr.Cells["Paid"].Style.ForeColor  = SD.Color.FromArgb(130, 230, 130);
-        tr.Cells["Paid"].Style.BackColor  = SD.Color.FromArgb(30, 58, 30);
+        rows.Add(new ShoppingRow
+        {
+            Product = "ИТОГО",
+            Price   = estimatedTotal > 0 ? $"~{estimatedTotal:F0}" : "",
+            IsTotal = true
+        });
     }
 
-    private void UpdateShoppingPaidTotal(SWF.DataGridView dgv)
-    {
-        decimal total = 0;
-        SWF.DataGridViewRow? totRow = null;
-        var amounts = new Dictionary<string, decimal>();
-        foreach (SWF.DataGridViewRow row in dgv.Rows)
-        {
-            if (row.IsNewRow) continue;
-            if (row.Tag?.ToString() == "total") { totRow = row; continue; }
-            string prod = row.Cells["Product"]?.Value?.ToString() ?? "";
-            if (decimal.TryParse(row.Cells["Paid"]?.Value?.ToString(), out decimal v) && v > 0)
-                { total += v; if (!string.IsNullOrEmpty(prod)) amounts[prod] = v; }
-        }
-        if (totRow != null) totRow.Cells["Paid"].Value = total > 0 ? total.ToString("F0") : "";
+    private static ObservableCollection<ShoppingRow>? ShopRows(SWC.DataGrid dg) =>
+        dg.ItemsSource as ObservableCollection<ShoppingRow>;
 
-        if (dgv.Tag is string tag && tag.Contains(':'))
+    private void UpdateShoppingPaidTotal(SWC.DataGrid dg)
+    {
+        if (ShopRows(dg) is not { } rows) return;
+        decimal total = 0;
+        ShoppingRow? totRow = null;
+        var amounts = new Dictionary<string, decimal>();
+        foreach (var row in rows)
+        {
+            if (row.IsTotal) { totRow = row; continue; }
+            if (decimal.TryParse(row.Paid, out decimal v) && v > 0)
+                { total += v; if (!string.IsNullOrEmpty(row.Product)) amounts[row.Product] = v; }
+        }
+        if (totRow != null) totRow.Paid = total > 0 ? total.ToString("F0") : "";
+
+        if (dg.Tag is string tag && tag.Contains(':'))
         {
             var parts = tag.Split(':', 2);
             string type = parts[0], dateKey = parts[1];
@@ -1193,37 +957,46 @@ public partial class MainWindow
         }
     }
 
-    private static void CopyShoppingListToClipboard(SWF.DataGridView dgv, string title)
+    private static void CopyShoppingListToClipboard(SWC.DataGrid dg, string title)
     {
+        if (ShopRows(dg) is not { } rows) return;
         var sb = new StringBuilder();
         sb.AppendLine(title);
         sb.AppendLine(new string('─', 40));
-        foreach (SWF.DataGridViewRow row in dgv.Rows)
+        foreach (var row in rows)
         {
-            if (row.IsNewRow) continue;
-            bool isTotal = row.Tag?.ToString() == "total";
-            bool done    = row.Cells["Done"].Value is true;
-            string prod  = row.Cells["Product"].Value?.ToString()   ?? "";
-            string qty   = row.Cells["Quantity"]?.Value?.ToString() ?? "";
-            string price = row.Cells["Price"].Value?.ToString()     ?? "";
-            string paid  = row.Cells["Paid"]?.Value?.ToString()     ?? "";
-            if (isTotal) { sb.AppendLine(new string('─', 40)); sb.Append($"ИТОГО: {price}"); if (!string.IsNullOrEmpty(paid)) sb.Append($"  |  Заплачено: {paid}"); sb.AppendLine(); }
-            else { string check = done ? "☑" : "☐"; sb.Append($"{check} {prod}"); if (!string.IsNullOrEmpty(qty)) sb.Append($": {qty}"); if (!string.IsNullOrEmpty(price)) sb.Append($"  ({price})"); if (!string.IsNullOrEmpty(paid) && paid != "0") sb.Append($"  ✓{paid}"); sb.AppendLine(); }
+            if (row.IsTotal)
+            {
+                sb.AppendLine(new string('─', 40));
+                sb.Append($"ИТОГО: {row.Price}");
+                if (!string.IsNullOrEmpty(row.Paid)) sb.Append($"  |  Заплачено: {row.Paid}");
+                sb.AppendLine();
+            }
+            else
+            {
+                string check = row.Done ? "☑" : "☐";
+                sb.Append($"{check} {row.Product}");
+                if (!string.IsNullOrEmpty(row.Quantity)) sb.Append($": {row.Quantity}");
+                if (!string.IsNullOrEmpty(row.Price))    sb.Append($"  ({row.Price})");
+                if (!string.IsNullOrEmpty(row.Paid) && row.Paid != "0") sb.Append($"  ✓{row.Paid}");
+                sb.AppendLine();
+            }
         }
         try { System.Windows.Clipboard.SetText(sb.ToString()); } catch { }
     }
 
-    private void RestorePaidValues(SWF.DataGridView dgv, string sessionType, string dateKey)
+    private void RestorePaidValues(SWC.DataGrid dg, string sessionType, string dateKey)
     {
-        if (!paidData.TryGetValue(sessionType, out var sessions)) return;
-        if (!sessions.TryGetValue(dateKey, out var amounts)) return;
-        foreach (SWF.DataGridViewRow row in dgv.Rows)
+        if (ShopRows(dg) is not { } rows) return;
+        if (paidData.TryGetValue(sessionType, out var sessions) && sessions.TryGetValue(dateKey, out var amounts))
         {
-            if (row.IsNewRow || row.Tag?.ToString() == "total") continue;
-            string prod = row.Cells["Product"].Value?.ToString() ?? "";
-            if (amounts.TryGetValue(prod, out decimal amt) && amt > 0) row.Cells["Paid"].Value = amt.ToString("F0");
+            foreach (var row in rows)
+            {
+                if (row.IsTotal) continue;
+                if (amounts.TryGetValue(row.Product, out decimal amt) && amt > 0) row.Paid = amt.ToString("F0");
+            }
         }
-        UpdateShoppingPaidTotal(dgv);
+        UpdateShoppingPaidTotal(dg);
     }
 
     // ══════════════════════════════════════════════════ РАСЧЁТЫ

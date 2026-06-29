@@ -83,6 +83,7 @@ public partial class MainWindow : Window
 
         InitMealCards();
         InitWinFormsHosts();
+        InitShoppingGrids();
         LoadData();
         UpdateBudgetLabel();
         ValidatePeriod();
