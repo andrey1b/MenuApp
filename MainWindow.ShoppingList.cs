@@ -1,192 +1,46 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using QRCoder;
-using SWF  = System.Windows.Forms;
-using SD   = System.Drawing;
+using SWC  = System.Windows.Controls;
+using SWin = System.Windows;
 
 namespace MenuApp;
 
 public partial class MainWindow
 {
-    private SWF.DataGridView  dgvShoppingList = null!;
-    private SWF.Label         lblServerUrl    = null!;
-    private SWF.Label         lblScanHint     = null!;
-    private SWF.Label         lblListSource   = null!;
-    private SWF.PictureBox    pbQr            = null!;
-    private SWF.Button        btnStartServer  = null!;
-    private SWF.Button        btnStopServer   = null!;
+    // Вкладка «Составить список» переведена на WPF (dgShopList и панель сервера в MainWindow.xaml).
+    private readonly ObservableCollection<ShoppingListRow> shopList = new();
     private ShoppingListServer? _shoppingServer;
 
-    // ══════════════════════════════════════════════════ ПАНЕЛЬ
+    // ══════════════════════════════════════════════════ ИНИЦИАЛИЗАЦИЯ WPF-ВКЛАДКИ
 
-    internal SWF.Panel CreateShoppingListPanel()
+    internal void InitShoppingListTab()
     {
-        var table = new SWF.TableLayoutPanel
-        {
-            Dock = SWF.DockStyle.Fill,
-            ColumnCount = 2, RowCount = 1
-        };
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 66f));
-        table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 34f));
-        table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100f));
+        dgShopList.ItemsSource = shopList;
 
-        table.Controls.Add(BuildListPanel(), 0, 0);
-        table.Controls.Add(BuildServerPanel(), 1, 0);
-
-        var outer = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        outer.Controls.Add(table);
-        outer.VisibleChanged += (_, _) => { if (outer.Visible) PopulateShoppingList(); };
-        return outer;
-    }
-
-    // ── Левая панель: таблица продуктов ─────────────────────
-
-    private SWF.Panel BuildListPanel()
-    {
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-
-        // Верхняя полоска с кнопками
-        var top = new SWF.Panel { Dock = SWF.DockStyle.Top, Height = 92, BackColor = SD.Color.WhiteSmoke, Padding = new SWF.Padding(8, 8, 8, 4) };
-        var btnAll     = MakeSmallBtn("Выбрать все",  4,  8, 140, SD.Color.FromArgb(195, 230, 195));
-        var btnNone    = MakeSmallBtn("Снять все",   152, 8, 115, SD.Color.FromArgb(230, 200, 200));
-        var btnRefresh = MakeSmallBtn("🔄 Обновить", 275, 8, 130, SD.Color.FromArgb(210, 230, 255));
-        var lblHint = new SWF.Label
-        {
-            Text = "Отметьте продукты, укажите количество, затем нажмите «Открыть на телефоне» →",
-            Left = 415, Top = 10, Width = 450, Height = 36,
-            TextAlign = SD.ContentAlignment.MiddleLeft,
-            Font = new SD.Font("Segoe UI", 11), ForeColor = SD.Color.DimGray, AutoSize = false
-        };
-        lblListSource = new SWF.Label
-        {
-            Text = "", Left = 4, Top = 52, Width = 860, Height = 32,
-            TextAlign = SD.ContentAlignment.MiddleLeft,
-            Font = new SD.Font("Segoe UI", 10), ForeColor = SD.Color.FromArgb(80, 120, 80), AutoSize = false
-        };
-        btnRefresh.Click += (_, _) => { dgvShoppingList.Rows.Clear(); PopulateShoppingList(); };
-        top.Controls.AddRange(new SWF.Control[] { btnAll, btnNone, btnRefresh, lblHint, lblListSource });
-
-        // DataGridView
-        dgvShoppingList = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            AllowUserToAddRows = false, AllowUserToDeleteRows = false,
-            AllowUserToResizeRows = false, RowHeadersVisible = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White, BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(44, 95, 45), ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.FromArgb(240, 248, 240) },
-            RowTemplate = { Height = 40 }
-        };
-        dgvShoppingList.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgvShoppingList.ColumnHeadersHeight = 42;
-        dgvShoppingList.EnableHeadersVisualStyles = false;
-
-        dgvShoppingList.Columns.Add(new SWF.DataGridViewCheckBoxColumn { Name = "SlCheck", HeaderText = "✓",         FillWeight = 5  });
-        dgvShoppingList.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "SlName",  HeaderText = "Продукт",   FillWeight = 52, ReadOnly = true });
-        dgvShoppingList.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "SlQty",   HeaderText = "Количество",FillWeight = 26 });
-        dgvShoppingList.Columns.Add(new SWF.DataGridViewTextBoxColumn  { Name = "SlUnit",  HeaderText = "Ед.",       FillWeight = 17, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter } });
-
-        foreach (SWF.DataGridViewColumn col in dgvShoppingList.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-        dgvShoppingList.CurrentCellDirtyStateChanged += (s, e) =>
-        {
-            if (dgvShoppingList.IsCurrentCellDirty) dgvShoppingList.CommitEdit(SWF.DataGridViewDataErrorContexts.Commit);
-        };
-
-        btnAll.Click  += (_, _) => { foreach (SWF.DataGridViewRow r in dgvShoppingList.Rows) r.Cells["SlCheck"].Value = true;  };
-        btnNone.Click += (_, _) => { foreach (SWF.DataGridViewRow r in dgvShoppingList.Rows) r.Cells["SlCheck"].Value = false; };
-
-        panel.Controls.Add(dgvShoppingList);
-        panel.Controls.Add(top);
-        return panel;
-    }
-
-    // ── Правая панель: сервер + QR ──────────────────────────
-
-    private SWF.Panel BuildServerPanel()
-    {
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill, BackColor = SD.Color.FromArgb(238, 248, 238), Padding = new SWF.Padding(16) };
-
-        var lblTitle = new SWF.Label
-        {
-            Text = "Отправить на телефон",
-            Font = new SD.Font("Segoe UI", 14, SD.FontStyle.Bold),
-            ForeColor = SD.Color.FromArgb(44, 95, 45),
-            AutoSize = true, Left = 16, Top = 14
-        };
-
-        btnStartServer = new SWF.Button
-        {
-            Text = "📱  Открыть на телефоне",
-            Left = 16, Top = 54, Width = 260, Height = 46,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = SD.Color.FromArgb(44, 95, 45), ForeColor = SD.Color.White,
-            FlatStyle = SWF.FlatStyle.Flat, Cursor = SWF.Cursors.Hand
-        };
-        btnStartServer.FlatAppearance.BorderSize = 0;
-
-        btnStopServer = new SWF.Button
-        {
-            Text = "■  Остановить сервер",
-            Left = 16, Top = 54, Width = 260, Height = 46,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = SD.Color.FromArgb(190, 50, 50), ForeColor = SD.Color.White,
-            FlatStyle = SWF.FlatStyle.Flat, Cursor = SWF.Cursors.Hand, Visible = false
-        };
-        btnStopServer.FlatAppearance.BorderSize = 0;
-
-        lblScanHint = new SWF.Label
-        {
-            Text = "Отсканируйте QR-код или откройте\nадрес в браузере телефона:",
-            Left = 16, Top = 114, Width = 300, Height = 46,
-            Font = new SD.Font("Segoe UI", 11), ForeColor = SD.Color.DimGray, Visible = false
-        };
-
-        lblServerUrl = new SWF.Label
-        {
-            Text = "", Left = 16, Top = 166, Width = 340, Height = 28,
-            Font = new SD.Font("Courier New", 12, SD.FontStyle.Bold),
-            ForeColor = SD.Color.FromArgb(0, 70, 150), Visible = false
-        };
-
-        pbQr = new SWF.PictureBox
-        {
-            Left = 16, Top = 202, Width = 250, Height = 250,
-            SizeMode = SWF.PictureBoxSizeMode.Zoom,
-            BackColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.FixedSingle,
-            Visible = false
-        };
-
+        btnSlAll.Click       += (_, _) => { foreach (var r in shopList) r.Check = true;  };
+        btnSlNone.Click      += (_, _) => { foreach (var r in shopList) r.Check = false; };
+        btnSlRefresh.Click   += (_, _) => { shopList.Clear(); PopulateShoppingList(); };
         btnStartServer.Click += BtnStartServer_Click;
         btnStopServer.Click  += BtnStopServer_Click;
-
-        panel.Controls.AddRange(new SWF.Control[] { lblTitle, btnStartServer, btnStopServer, lblScanHint, lblServerUrl, pbQr });
-        return panel;
     }
 
     // ══════════════════════════════════════════════════ СОБЫТИЯ
 
-    private void BtnStartServer_Click(object? s, EventArgs e)
+    private void BtnStartServer_Click(object? s, SWin.RoutedEventArgs e)
     {
         StopShoppingServer();
         string html = BuildShoppingHtml();
         if (string.IsNullOrEmpty(html))
         {
-            SWF.MessageBox.Show("Не отмечено ни одного продукта.\nПоставьте галочки напротив нужных товаров.",
-                "Список пуст", SWF.MessageBoxButtons.OK, SWF.MessageBoxIcon.Information);
+            SWin.MessageBox.Show("Не отмечено ни одного продукта.\nПоставьте галочки напротив нужных товаров.",
+                "Список пуст", SWin.MessageBoxButton.OK, SWin.MessageBoxImage.Information);
             return;
         }
 
@@ -197,46 +51,46 @@ public partial class MainWindow
         string ip  = GetLocalIp();
         string url = $"http://{ip}:{port}";
 
-        lblServerUrl.Text     = url;
-        lblScanHint.Visible   = true;
-        lblServerUrl.Visible  = true;
-        pbQr.Visible          = true;
-        btnStartServer.Visible = false;
-        btnStopServer.Visible  = true;
+        lblServerUrl.Text         = url;
+        lblScanHint.Visibility    = SWin.Visibility.Visible;
+        lblServerUrl.Visibility   = SWin.Visibility.Visible;
+        qrBorder.Visibility       = SWin.Visibility.Visible;
+        btnStartServer.Visibility = SWin.Visibility.Collapsed;
+        btnStopServer.Visibility  = SWin.Visibility.Visible;
 
         ShowQr(url);
     }
 
-    private void BtnStopServer_Click(object? s, EventArgs e)
+    private void BtnStopServer_Click(object? s, SWin.RoutedEventArgs e)
     {
         StopShoppingServer();
-        lblScanHint.Visible    = false;
-        lblServerUrl.Visible   = false;
-        pbQr.Visible           = false;
-        btnStopServer.Visible  = false;
-        btnStartServer.Visible = true;
+        lblScanHint.Visibility    = SWin.Visibility.Collapsed;
+        lblServerUrl.Visibility   = SWin.Visibility.Collapsed;
+        qrBorder.Visibility       = SWin.Visibility.Collapsed;
+        btnStopServer.Visibility  = SWin.Visibility.Collapsed;
+        btnStartServer.Visibility = SWin.Visibility.Visible;
     }
 
     // ══════════════════════════════════════════════════ ВСПОМОГАТЕЛЬНЫЕ
 
     private void PopulateShoppingList()
     {
-        if (dgvShoppingList.Rows.Count > 0) return;
+        if (shopList.Count > 0) return;
 
         var haItems = LoadSubcategoriesFromHomeAccounting();
         if (haItems.Count > 0)
         {
             foreach (var (name, unit) in haItems)
-                dgvShoppingList.Rows.Add(false, name, "1", unit);
-            lblListSource.Text = $"📦 Из HomeAccounting: {haItems.Count} продуктов";
-            lblListSource.ForeColor = SD.Color.FromArgb(40, 100, 40);
+                shopList.Add(new ShoppingListRow { Name = name, Unit = unit });
+            lblListSource.Text       = $"📦 Из HomeAccounting: {haItems.Count} продуктов";
+            lblListSource.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 100, 40));
         }
         else
         {
             foreach (var p in prices)
-                dgvShoppingList.Rows.Add(false, p.Name, "1", p.Unit);
-            lblListSource.Text = "ℹ Встроенный список (HomeAccounting не найден)";
-            lblListSource.ForeColor = SD.Color.FromArgb(140, 100, 40);
+                shopList.Add(new ShoppingListRow { Name = p.Name, Unit = p.Unit });
+            lblListSource.Text       = "ℹ Встроенный список (HomeAccounting не найден)";
+            lblListSource.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(140, 100, 40));
         }
     }
 
@@ -285,15 +139,11 @@ public partial class MainWindow
     private string BuildShoppingHtml()
     {
         var items = new List<(string name, string qty)>();
-        foreach (SWF.DataGridViewRow row in dgvShoppingList.Rows)
+        foreach (var row in shopList)
         {
-            if (row.IsNewRow) continue;
-            if (row.Cells["SlCheck"].Value is not true) continue;
-            string name = row.Cells["SlName"].Value?.ToString() ?? "";
-            string qty  = (row.Cells["SlQty"].Value?.ToString() ?? "1").Trim();
-            string unit = row.Cells["SlUnit"].Value?.ToString() ?? "";
-            string label = $"{qty} {unit}".Trim();
-            items.Add((name, label));
+            if (!row.Check) continue;
+            string label = $"{(row.Qty ?? "1").Trim()} {row.Unit}".Trim();
+            items.Add((row.Name, label));
         }
         if (items.Count == 0) return "";
 
@@ -312,10 +162,20 @@ public partial class MainWindow
         {
             var gen  = new QRCodeGenerator();
             var data = gen.CreateQrCode(url, QRCodeGenerator.ECCLevel.M);
-            var code = new QRCode(data);
-            pbQr.Image = code.GetGraphic(8, SD.Color.Black, SD.Color.White, true);
+            byte[] png = new PngByteQRCode(data).GetGraphic(8);
+
+            var img = new System.Windows.Media.Imaging.BitmapImage();
+            using (var ms = new MemoryStream(png))
+            {
+                img.BeginInit();
+                img.CacheOption  = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                img.StreamSource = ms;
+                img.EndInit();
+            }
+            img.Freeze();
+            imgQr.Source = img;
         }
-        catch { pbQr.Visible = false; }
+        catch { qrBorder.Visibility = SWin.Visibility.Collapsed; }
     }
 
     private void StopShoppingServer()
@@ -347,15 +207,6 @@ public partial class MainWindow
         }
         return start;
     }
-
-    private static SWF.Button MakeSmallBtn(string text, int left, int top, int w, SD.Color bg) =>
-        new SWF.Button
-        {
-            Text = text, Left = left, Top = top, Width = w, Height = 36,
-            Font = new SD.Font("Segoe UI", 11),
-            BackColor = bg, FlatStyle = SWF.FlatStyle.Flat,
-            FlatAppearance = { BorderSize = 1 }
-        };
 
     // ══════════════════════════════════════════════════ HTML-ШАБЛОН
 

@@ -59,7 +59,6 @@ public partial class MainWindow
 
         AddHost(ProductsHost,   CreateProductsTabPanel());
         AddHost(RealPricesHost,   CreateRealPricesTabPanel());
-        AddHost(ShoppingListHost, CreateShoppingListPanel());
         AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
     }
 

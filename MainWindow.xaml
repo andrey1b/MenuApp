@@ -318,7 +318,66 @@
                 <Grid x:Name="RealPricesHost"/>
             </TabItem>
             <TabItem Header="  Составить список  ">
-                <Grid x:Name="ShoppingListHost"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая часть: кнопки + таблица -->
+                    <DockPanel Grid.Column="0">
+                        <Border DockPanel.Dock="Top" Background="WhiteSmoke" Padding="8,8,8,4">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="btnSlAll"     Content="Выбрать все" Height="34" Padding="12,0" Margin="0,0,8,0"
+                                            Background="#C3E6C3" BorderBrush="#9DBF9D" BorderThickness="1" Cursor="Hand"/>
+                                    <Button x:Name="btnSlNone"    Content="Снять все"   Height="34" Padding="12,0" Margin="0,0,8,0"
+                                            Background="#E6C8C8" BorderBrush="#BF9D9D" BorderThickness="1" Cursor="Hand"/>
+                                    <Button x:Name="btnSlRefresh" Content="🔄 Обновить" Height="34" Padding="12,0" Margin="0,0,12,0"
+                                            Background="#D2E6FF" BorderBrush="#9DB3BF" BorderThickness="1" Cursor="Hand"/>
+                                    <TextBlock Text="Отметьте продукты, укажите количество, затем «Открыть на телефоне» →"
+                                               VerticalAlignment="Center" FontSize="12" Foreground="DimGray" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <TextBlock x:Name="lblListSource" Margin="2,6,0,0" FontSize="12" Foreground="#508050"/>
+                            </StackPanel>
+                        </Border>
+                        <DataGrid x:Name="dgShopList" Style="{StaticResource GridBase}" IsReadOnly="False">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="✓" Width="44">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Check, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Продукт"    Width="5*"   IsReadOnly="True" Binding="{Binding Name}" ElementStyle="{StaticResource CellLeft}"/>
+                                <DataGridTextColumn Header="Количество" Width="2.6*" Binding="{Binding Qty, UpdateSourceTrigger=LostFocus}" ElementStyle="{StaticResource CellLeft}"/>
+                                <DataGridTextColumn Header="Ед."        Width="1.7*" IsReadOnly="True" Binding="{Binding Unit}" ElementStyle="{StaticResource CellCenter}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+
+                    <!-- Правая часть: сервер + QR -->
+                    <Border Grid.Column="1" Background="#EEF8EE" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Отправить на телефон" FontSize="15" FontWeight="Bold" Foreground="#2C5F2D" Margin="0,0,0,12"/>
+                            <Button x:Name="btnStartServer" Content="📱  Открыть на телефоне" Height="46" FontSize="13" FontWeight="Bold"
+                                    Background="#2C5F2D" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left" Width="270"/>
+                            <Button x:Name="btnStopServer" Content="■  Остановить сервер" Height="46" FontSize="13" FontWeight="Bold"
+                                    Background="#BE3232" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left" Width="270"
+                                    Visibility="Collapsed" Margin="0,0,0,0"/>
+                            <TextBlock x:Name="lblScanHint" Margin="0,16,0,0" FontSize="12" Foreground="DimGray" TextWrapping="Wrap"
+                                       Text="Отсканируйте QR-код или откройте адрес в браузере телефона:" Visibility="Collapsed"/>
+                            <TextBlock x:Name="lblServerUrl" Margin="0,10,0,0" FontFamily="Courier New" FontSize="14" FontWeight="Bold"
+                                       Foreground="#004696" Visibility="Collapsed"/>
+                            <Border x:Name="qrBorder" Margin="0,12,0,0" Width="250" Height="250" Background="White"
+                                    BorderBrush="#A0A0A0" BorderThickness="1" HorizontalAlignment="Left" Visibility="Collapsed">
+                                <Image x:Name="imgQr" Stretch="Uniform"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
             <TabItem Header="  Вопросы ИИ  ">
                 <Grid x:Name="AiQuestionsHost"/>
