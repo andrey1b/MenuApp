@@ -1,0 +1,118 @@
+<Window x:Class="MenuApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Меню питания семьи"
+        Width="1280" Height="780" MinWidth="1020" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="#D0E8D0"
+        FontFamily="Segoe UI"
+        FontSize="14">
+
+    <DockPanel>
+
+        <!-- ══════════════════════════════════════════ ШАПКА -->
+        <Border DockPanel.Dock="Top" Height="130" Background="#2C5F2D">
+            <Grid Margin="14,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="42"/>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="46"/>
+                </Grid.RowDefinitions>
+
+                <!-- Ряд 0: Заголовок · Версия · Бюджет · Дата/Ккал -->
+                <DockPanel Grid.Row="0" VerticalAlignment="Center">
+                    <TextBlock Text="Меню питания" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxVersion" FontSize="12" Foreground="#A8D5A9" VerticalAlignment="Bottom" Margin="6,0,28,2"/>
+                    <TextBlock x:Name="TxBudget"  FontSize="13" Foreground="LightCyan" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxDayDate" FontSize="13" Foreground="White"     VerticalAlignment="Center" Margin="20,0,0,0"/>
+                </DockPanel>
+
+                <!-- Ряд 1: Уровень питания · Уведомление об обновлении -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxTier"   FontSize="12" Foreground="LightYellow"/>
+                    <TextBlock x:Name="TxUpdate" FontSize="12" FontWeight="Bold" Foreground="Gold"
+                               Margin="20,0,0,0" Visibility="Collapsed" Cursor="Hand"
+                               MouseLeftButtonUp="TxUpdate_Click"/>
+                </StackPanel>
+
+                <!-- Ряд 2: Период · Быстрые кнопки · Поиск · Настройки
+                     ВАЖНО: правые кнопки объявляются ПЕРВЫМИ — иначе DockPanel их обрезает -->
+                <DockPanel Grid.Row="2" VerticalAlignment="Center">
+
+                    <!-- Правая сторона — объявляем первыми! -->
+                    <Button x:Name="BtnSettings" Content="Настройки"
+                            Style="{StaticResource HdrBtn}" Width="120"
+                            DockPanel.Dock="Right" Margin="5,0,0,0" Click="BtnSettings_Click"/>
+                    <Button x:Name="BtnYT" Content="YouTube" IsEnabled="False"
+                            Style="{StaticResource HdrBtn}" Width="100"
+                            DockPanel.Dock="Right" Margin="5,0,0,0" Click="BtnYT_Click"/>
+                    <Button x:Name="BtnBing" Content="Bing" IsEnabled="False"
+                            Style="{StaticResource HdrBtn}" Width="78"
+                            DockPanel.Dock="Right" Margin="5,0,0,0" Click="BtnBing_Click"/>
+                    <Button x:Name="BtnGoogle" Content="Google" IsEnabled="False"
+                            Style="{StaticResource HdrBtn}" Width="92"
+                            DockPanel.Dock="Right" Margin="5,0,0,0" Click="BtnGoogle_Click"/>
+
+                    <!-- Левая сторона -->
+                    <DatePicker x:Name="DtpStart" Width="128" Margin="0,0,5,0"
+                                SelectedDateFormat="Short"
+                                SelectedDateChanged="DtpPeriod_Changed"/>
+                    <DatePicker x:Name="DtpEnd"   Width="128" Margin="0,0,5,0"
+                                SelectedDateFormat="Short"
+                                SelectedDateChanged="DtpPeriod_Changed"/>
+                    <Button x:Name="BtnApply" Content="▶ Применить"
+                            Style="{StaticResource HdrBtn}" Width="148" Margin="0,0,6,0"
+                            Click="BtnApply_Click"/>
+                    <Button x:Name="Btn7d"  Content="7 дн."  Style="{StaticResource HdrBtn}" Width="78" Margin="0,0,5,0" Click="Btn7d_Click"/>
+                    <Button x:Name="Btn30d" Content="30 дн." Style="{StaticResource HdrBtn}" Width="88" Margin="0,0,5,0" Click="Btn30d_Click"/>
+                    <!-- Заполняет остаток — предупреждение о периоде -->
+                    <TextBlock x:Name="TxPeriodWarn" FontSize="12" FontStyle="Italic"
+                               Foreground="LightSalmon" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                </DockPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════════ ВКЛАДКИ -->
+        <TabControl Background="Transparent">
+
+            <!-- Вкладка 0: Сегодня (полностью WPF) -->
+            <TabItem Header="  Сегодня  ">
+                <DockPanel>
+                    <Grid x:Name="CardsGrid" DockPanel.Dock="Top" Height="140" Background="#D0E8D0"/>
+                    <Grid>
+                        <wv2:WebView2 x:Name="WebBrowser"/>
+                        <TextBlock x:Name="TxWebError" Visibility="Collapsed"
+                                   TextAlignment="Center" VerticalAlignment="Center"
+                                   FontSize="14" Foreground="Gray"
+                                   TextWrapping="Wrap" Padding="20"/>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="  Меню  ">
+                <Grid x:Name="MenuHost"/>
+            </TabItem>
+            <TabItem Header="  Продукты  ">
+                <Grid x:Name="ProductsHost"/>
+            </TabItem>
+            <TabItem Header="  Покупки  ">
+                <Grid x:Name="ShoppingHost"/>
+            </TabItem>
+            <TabItem Header="  Покупки на неделю  ">
+                <Grid x:Name="WeeklyHost"/>
+            </TabItem>
+            <TabItem Header="  Покупки на месяц  ">
+                <Grid x:Name="MonthlyHost"/>
+            </TabItem>
+            <TabItem Header="  Реальные цены  ">
+                <Grid x:Name="RealPricesHost"/>
+            </TabItem>
+            <TabItem Header="  Составить список  ">
+                <Grid x:Name="ShoppingListHost"/>
+            </TabItem>
+
+        </TabControl>
+
+    </DockPanel>
+</Window>
