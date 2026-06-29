@@ -50,17 +50,6 @@ public partial class MainWindow
 
     // ══════════════════════════════════════════════════ WINFORMS-ХОСТЫ
 
-    internal void InitWinFormsHosts()
-    {
-        void AddHost(SWC.Grid grid, SWF.Control ctrl)
-        {
-            var host = new SWFI.WindowsFormsHost { Child = ctrl };
-            grid.Children.Add(host);
-        }
-
-        AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
-    }
-
     // ══════════════════════════════════════════════════ WPF-ГРИД «РЕАЛЬНЫЕ ЦЕНЫ»
 
     internal void InitRealPricesGrid()

@@ -82,11 +82,11 @@ public partial class MainWindow : Window
         DtpEnd.SelectedDate   = periodEnd;
 
         InitMealCards();
-        InitWinFormsHosts();
         InitShoppingGrids();
         InitShoppingListTab();
         InitProductsGrid();
         InitRealPricesGrid();
+        InitAiQuestionsTab();
         LoadData();
         PopulateShoppingList();   // список продуктов для вкладки «Составить список» (после загрузки prices)
         UpdateBudgetLabel();
