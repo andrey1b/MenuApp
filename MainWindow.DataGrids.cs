@@ -20,9 +20,6 @@ public partial class MainWindow
 {
     // ══════════════════════════════════════════════════ ПОЛЯ ДАННЫХ
 
-    private SWF.DataGridView dgvRealPrices   = null!;
-    private SWF.Label        lblRealStatus   = null!;
-    private SWF.DataGridViewComboBoxColumn colExcelName = null!;
 
     // Списки покупок переведены на WPF DataGrid (dgShop* в MainWindow.xaml);
     // данные хранятся в коллекциях ShoppingRow.
@@ -33,6 +30,9 @@ public partial class MainWindow
 
     // Вкладка «Продукты» — WPF DataGrid dgProducts (MainWindow.xaml)
     private readonly ObservableCollection<ProductRow> products = new();
+
+    // Вкладка «Реальные цены» — WPF DataGrid dgRealPrices (MainWindow.xaml)
+    private readonly ObservableCollection<RealPriceRow> realPrices = new();
 
     private List<MealDay>   mealPlan = new();
     private List<PriceItem> prices   = new();
@@ -58,8 +58,28 @@ public partial class MainWindow
             grid.Children.Add(host);
         }
 
-        AddHost(RealPricesHost,   CreateRealPricesTabPanel());
         AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
+    }
+
+    // ══════════════════════════════════════════════════ WPF-ГРИД «РЕАЛЬНЫЕ ЦЕНЫ»
+
+    internal void InitRealPricesGrid()
+    {
+        dgRealPrices.ItemsSource = realPrices;
+        lblRealFile.Text = "Файл расходов: " + ExcelPriceService.ExcelFilePath;
+        btnRealRefresh.Click += (_, _) => RefreshFromExcel();
+
+        dgRealPrices.CellEditEnding += (_, e) =>
+        {
+            if (e.EditAction != SWC.DataGridEditAction.Commit) return;
+            if (e.Row?.Item is not RealPriceRow r) return;
+            string? col = e.Column?.Header as string;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (col == "Название в расходах") OnRealExcelChanged(r);
+                else if (col == "Коэф.")          OnRealMultChanged(r);
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        };
     }
 
     // ══════════════════════════════════════════════════ WPF-ГРИД «ПРОДУКТЫ»
@@ -135,114 +155,8 @@ public partial class MainWindow
     // FillShoppingDay / FillWeeklyShoppingTab / FillMonthlyShoppingTab через ShoppingRow.
 
     // ══════════════════════════════════════════════════ РЕАЛЬНЫЕ ЦЕНЫ
-
-    private SWF.Panel CreateRealPricesTabPanel()
-    {
-        var toolbar = new SWF.Panel
-        {
-            Dock = SWF.DockStyle.Top, Height = 42,
-            BackColor = SD.Color.FromArgb(228, 244, 228),
-            Padding = new SWF.Padding(6, 6, 6, 0)
-        };
-
-        var lblFile = new SWF.Label
-        {
-            Text = "Файл расходов: " + ExcelPriceService.ExcelFilePath,
-            AutoSize = true, Location = new System.Drawing.Point(8, 12),
-            Font = new SD.Font("Segoe UI", 12), ForeColor = SD.Color.DimGray
-        };
-
-        var btnRefresh = new SWF.Button
-        {
-            Text = "⟳ Обновить из файла",
-            Location = new System.Drawing.Point(toolbar.Width - 180, 6),
-            Width = 168, Height = 30,
-            Anchor = SWF.AnchorStyles.Top | SWF.AnchorStyles.Right,
-            BackColor = SD.Color.FromArgb(62, 135, 65), ForeColor = SD.Color.White,
-            FlatStyle = SWF.FlatStyle.Flat,
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold)
-        };
-        btnRefresh.FlatAppearance.BorderSize = 0;
-        btnRefresh.Click += (_, _) => RefreshFromExcel();
-        toolbar.Controls.AddRange(new SWF.Control[] { lblFile, btnRefresh });
-
-        lblRealStatus = new SWF.Label
-        {
-            Dock = SWF.DockStyle.Bottom, Height = 40,
-            TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-            Font = new SD.Font("Segoe UI", 12),
-            Padding = new SWF.Padding(8, 0, 0, 0),
-            BackColor = SD.Color.FromArgb(228, 242, 228),
-            BorderStyle = SWF.BorderStyle.FixedSingle,
-            ForeColor = SD.Color.DimGray
-        };
-
-        dgvRealPrices = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            AllowUserToAddRows = false, AllowUserToDeleteRows = false, AllowUserToResizeRows = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White, BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(44, 95, 45), ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.FromArgb(240, 248, 240) },
-            RowTemplate = { Height = 38 }
-        };
-        dgvRealPrices.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgvRealPrices.ColumnHeadersHeight = 42;
-        dgvRealPrices.EnableHeadersVisualStyles = false;
-
-        // Все столбцы — FillWeight, растягиваются по ширине окна
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpApp",  HeaderText = "Наш продукт",         FillWeight = 20, ReadOnly = true });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpUnit", HeaderText = "Ед.",                 FillWeight = 4,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter } });
-
-        colExcelName = new SWF.DataGridViewComboBoxColumn
-        {
-            Name = "RpExcel", HeaderText = "Название в расходах", FillWeight = 20,
-            FlatStyle = SWF.FlatStyle.Flat,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleLeft }
-        };
-        colExcelName.Items.Add("");
-        dgvRealPrices.Columns.Add(colExcelName);
-
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpExUnit", HeaderText = "Ед. Excel", FillWeight = 5, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter, ForeColor = SD.Color.DimGray } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpMult",   HeaderText = "Коэф.",      FillWeight = 5,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpLast",   HeaderText = "Посл. цена", FillWeight = 10, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold), BackColor = SD.Color.FromArgb(240, 255, 240) } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpAvg30",  HeaderText = "Ср. 30 дн.", FillWeight = 10, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold) } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpAvg90",  HeaderText = "Ср. 90 дн.", FillWeight = 10, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, ForeColor = SD.Color.DimGray } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpOur",    HeaderText = "Наша цена",  FillWeight = 9,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, ForeColor = SD.Color.DimGray } });
-        dgvRealPrices.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "RpDiff",   HeaderText = "Разница",    FillWeight = 7,  ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleCenter, Font = new SD.Font("Segoe UI", 12, SD.FontStyle.Bold) } });
-
-        foreach (SWF.DataGridViewColumn col in dgvRealPrices.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-        dgvRealPrices.DataError += (s, e) => e.Cancel = true;
-        dgvRealPrices.CurrentCellDirtyStateChanged += (s, e) =>
-        {
-            if (dgvRealPrices.IsCurrentCellDirty) dgvRealPrices.CommitEdit(SWF.DataGridViewDataErrorContexts.Commit);
-        };
-        dgvRealPrices.CellValueChanged += DgvRealPrices_CellValueChanged;
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(dgvRealPrices);
-        panel.Controls.Add(toolbar);
-        panel.Controls.Add(lblRealStatus);
-        return panel;
-    }
+    // Переведена на нативный WPF DataGrid (dgRealPrices в MainWindow.xaml).
+    // Привязка/обработчики — InitRealPricesGrid(); заполнение — FillRealPricesTab() через RealPriceRow.
 
     // ══════════════════════════════════════════════════ ЗАГРУЗКА ДАННЫХ
 
@@ -716,12 +630,8 @@ public partial class MainWindow
 
     private void FillRealPricesTab()
     {
-        colExcelName.Items.Clear();
-        colExcelName.Items.Add("");
-        foreach (var n in excelNames) colExcelName.Items.Add(n);
-
-        dgvRealPrices.CellValueChanged -= DgvRealPrices_CellValueChanged;
-        dgvRealPrices.Rows.Clear();
+        colRpExcel.ItemsSource = new[] { "" }.Concat(excelNames).ToArray();
+        realPrices.Clear();
 
         foreach (var p in prices)
         {
@@ -730,24 +640,34 @@ public partial class MainWindow
             decimal lastP = rp?.LastPrice ?? 0, avg30 = rp?.Avg30d ?? 0, avg90 = rp?.Avg90d ?? 0;
             string exUnit = rp?.LastUnit ?? "";
             decimal ourInExcel = m.Multiplier > 0 ? Math.Round(p.Price * m.Multiplier, 2) : p.Price;
-            string diffStr = ""; Color diffColor = SD.Color.DimGray;
+
+            string diffStr = "";
+            System.Windows.Media.Brush diffBrush = WMedia.Brushes.DimGray;
+            System.Windows.Media.Brush lastBrush = WMedia.Brushes.Black;
             if (lastP > 0 && ourInExcel > 0)
             {
                 decimal diff = (lastP - ourInExcel) / ourInExcel * 100m;
-                diffStr   = $"{diff:+0.0;-0.0}%";
-                diffColor = diff < -5m ? SD.Color.DarkGreen : diff > 5m ? SD.Color.Crimson : SD.Color.DarkOrange;
+                diffStr = $"{diff:+0.0;-0.0}%";
+                var c = diff < -5m ? WMedia.Brushes.DarkGreen : diff > 5m ? WMedia.Brushes.Crimson : WMedia.Brushes.DarkOrange;
+                diffBrush = c; lastBrush = c;
             }
-            int ri = dgvRealPrices.Rows.Add(p.Name, p.Unit, m.ExcelName, exUnit, m.Multiplier.ToString("F2"),
-                lastP > 0 ? lastP.ToString("F2") : "", avg30 > 0 ? avg30.ToString("F2") : "",
-                avg90 > 0 ? avg90.ToString("F2") : "", ourInExcel.ToString("F2"), diffStr);
-            if (diffStr != "")
-            {
-                dgvRealPrices.Rows[ri].Cells["RpDiff"].Style.ForeColor = diffColor;
-                dgvRealPrices.Rows[ri].Cells["RpLast"].Style.ForeColor = diffColor;
-            }
-        }
 
-        dgvRealPrices.CellValueChanged += DgvRealPrices_CellValueChanged;
+            realPrices.Add(new RealPriceRow
+            {
+                RpApp    = p.Name,
+                RpUnit   = p.Unit,
+                RpExcel  = m.ExcelName,
+                RpExUnit = exUnit,
+                RpMult   = m.Multiplier.ToString("F2"),
+                RpLast   = lastP > 0 ? lastP.ToString("F2") : "",
+                RpAvg30  = avg30 > 0 ? avg30.ToString("F2") : "",
+                RpAvg90  = avg90 > 0 ? avg90.ToString("F2") : "",
+                RpOur    = ourInExcel.ToString("F2"),
+                RpDiff   = diffStr,
+                DiffBrush = diffBrush,
+                LastBrush = lastBrush,
+            });
+        }
 
         int mapped = priceMappings.Count(m => !string.IsNullOrWhiteSpace(m.ExcelName));
         int total  = priceMappings.Count;
@@ -756,8 +676,8 @@ public partial class MainWindow
 
         if (fromShared)
         {
-            lblRealStatus.Text      = $"  Загружено {loaded} записей из общей базы «Офиса пенсионера»  |  Сопоставлено: {mapped} из {total} продуктов";
-            lblRealStatus.ForeColor = SD.Color.SeaGreen;
+            lblRealStatus.Text       = $"  Загружено {loaded} записей из общей базы «Офиса пенсионера»  |  Сопоставлено: {mapped} из {total} продуктов";
+            lblRealStatus.Foreground = WMedia.Brushes.SeaGreen;
         }
         else
         {
@@ -765,44 +685,39 @@ public partial class MainWindow
             lblRealStatus.Text = fileOk
                 ? $"  Загружено {loaded} записей из файла расходов  |  Сопоставлено: {mapped} из {total} продуктов"
                 : $"  ⚠ Нет данных: общая база пуста и файл не найден ({ExcelPriceService.ExcelFilePath})";
-            lblRealStatus.ForeColor = fileOk ? SD.Color.DimGray : SD.Color.Crimson;
+            lblRealStatus.Foreground = fileOk ? WMedia.Brushes.DimGray : WMedia.Brushes.Crimson;
         }
     }
 
-    private void DgvRealPrices_CellValueChanged(object? sender, SWF.DataGridViewCellEventArgs e)
+    // Изменили «Название в расходах» (ComboBox) → подобрать коэффициент по единицам, сохранить, пересчитать
+    private void OnRealExcelChanged(RealPriceRow r)
     {
-        if (e.RowIndex < 0) return;
-        var row = dgvRealPrices.Rows[e.RowIndex];
-        string appProduct = row.Cells["RpApp"].Value?.ToString() ?? "";
-        string colName    = dgvRealPrices.Columns[e.ColumnIndex].Name;
-
-        var mapping = priceMappings.FirstOrDefault(m => m.AppProduct == appProduct);
+        var mapping = priceMappings.FirstOrDefault(m => m.AppProduct == r.RpApp);
         if (mapping == null) return;
 
-        if (colName == "RpExcel")
+        string newName = r.RpExcel ?? "";
+        mapping.ExcelName = newName;
+        if (!string.IsNullOrEmpty(newName))
         {
-            string newName = row.Cells["RpExcel"].Value?.ToString() ?? "";
-            mapping.ExcelName = newName;
-            if (!string.IsNullOrEmpty(newName))
-            {
-                string appUnit = prices.Find(p => p.Name == appProduct)?.Unit ?? "";
-                string exUnit  = excelPurchases.Where(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(p => p.Date).FirstOrDefault()?.Unit ?? "";
-                decimal mult = ExcelPriceService.DefaultMultiplier(exUnit, appUnit);
-                mapping.Multiplier = mult;
-                dgvRealPrices.CellValueChanged -= DgvRealPrices_CellValueChanged;
-                row.Cells["RpMult"].Value   = mult.ToString("F2");
-                row.Cells["RpExUnit"].Value = exUnit;
-                dgvRealPrices.CellValueChanged += DgvRealPrices_CellValueChanged;
-            }
+            string appUnit = prices.Find(p => p.Name == r.RpApp)?.Unit ?? "";
+            string exUnit  = excelPurchases.Where(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(p => p.Date).FirstOrDefault()?.Unit ?? "";
+            mapping.Multiplier = ExcelPriceService.DefaultMultiplier(exUnit, appUnit);
         }
-        else if (colName == "RpMult")
-        {
-            if (decimal.TryParse(row.Cells["RpMult"].Value?.ToString(), out decimal mult) && mult > 0)
-                mapping.Multiplier = mult;
-        }
-        else return;
+        SaveRecomputeRefillRealPrices();
+    }
 
+    // Изменили коэффициент вручную
+    private void OnRealMultChanged(RealPriceRow r)
+    {
+        var mapping = priceMappings.FirstOrDefault(m => m.AppProduct == r.RpApp);
+        if (mapping == null) return;
+        if (decimal.TryParse(r.RpMult, out decimal mult) && mult > 0) mapping.Multiplier = mult;
+        SaveRecomputeRefillRealPrices();
+    }
+
+    private void SaveRecomputeRefillRealPrices()
+    {
         ExcelPriceService.SaveMappings(priceMappings);
         realPriceData = ExcelPriceService.ComputeRealPrices(priceMappings, excelPurchases);
         FillRealPricesTab();

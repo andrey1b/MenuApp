@@ -390,7 +390,76 @@
                 </DockPanel>
             </TabItem>
             <TabItem Header="  Реальные цены  ">
-                <Grid x:Name="RealPricesHost"/>
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#E4F4E4" Height="42" Padding="6,6,6,0">
+                        <Grid>
+                            <TextBlock x:Name="lblRealFile" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" Foreground="DimGray"/>
+                            <Button x:Name="btnRealRefresh" Content="⟳ Обновить из файла" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Margin="0,0,12,0" Height="30" Width="180" Background="#3E8741" Foreground="White"
+                                    BorderThickness="0" FontWeight="Bold" Cursor="Hand"/>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Background="#E4F2E4" BorderBrush="#9DBF9D" BorderThickness="1" Height="40">
+                        <TextBlock x:Name="lblRealStatus" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" Foreground="DimGray"/>
+                    </Border>
+                    <DataGrid x:Name="dgRealPrices" Style="{StaticResource GridBase}" IsReadOnly="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Наш продукт" Width="20*" IsReadOnly="True" Binding="{Binding RpApp}" ElementStyle="{StaticResource CellLeft}"/>
+                            <DataGridTextColumn Header="Ед." Width="4*" IsReadOnly="True" Binding="{Binding RpUnit}" ElementStyle="{StaticResource CellCenter}"/>
+                            <DataGridComboBoxColumn x:Name="colRpExcel" Header="Название в расходах" Width="20*" SelectedItemBinding="{Binding RpExcel}"/>
+                            <DataGridTextColumn Header="Ед. Excel" Width="5*" IsReadOnly="True" Binding="{Binding RpExUnit}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenter}">
+                                        <Setter Property="Foreground" Value="DimGray"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Коэф." Width="5*" Binding="{Binding RpMult}" ElementStyle="{StaticResource CellCenter}"/>
+                            <DataGridTextColumn Header="Посл. цена" Width="10*" IsReadOnly="True" Binding="{Binding RpLast}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="{Binding LastBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                                <DataGridTextColumn.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                        <Setter Property="Background" Value="#F0FFF0"/>
+                                    </Style>
+                                </DataGridTextColumn.CellStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Ср. 30 дн." Width="10*" IsReadOnly="True" Binding="{Binding RpAvg30}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Ср. 90 дн." Width="10*" IsReadOnly="True" Binding="{Binding RpAvg90}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="Foreground" Value="DimGray"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Наша цена" Width="9*" IsReadOnly="True" Binding="{Binding RpOur}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellRight}">
+                                        <Setter Property="Foreground" Value="DimGray"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Разница" Width="7*" IsReadOnly="True" Binding="{Binding RpDiff}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CellCenter}">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="{Binding DiffBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
             </TabItem>
             <TabItem Header="  Составить список  ">
                 <Grid>
