@@ -91,7 +91,99 @@
             </TabItem>
 
             <TabItem Header="  Меню  ">
-                <Grid x:Name="MenuHost"/>
+                <DataGrid x:Name="dgMenu" Style="{StaticResource GridBase}">
+                    <DataGrid.Resources>
+                        <!-- Текст ячеек с блюдами: перенос по словам, фон = подсветка «неизвестное блюдо» -->
+                        <Style x:Key="MealText" TargetType="TextBlock">
+                            <Setter Property="TextWrapping"        Value="Wrap"/>
+                            <Setter Property="VerticalAlignment"   Value="Center"/>
+                            <Setter Property="Margin"              Value="5,2,5,2"/>
+                        </Style>
+                        <!-- Числовые ккал-ячейки: справа, серым -->
+                        <Style x:Key="CalText" TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment"   Value="Center"/>
+                            <Setter Property="Foreground"          Value="DimGray"/>
+                            <Setter Property="Margin"              Value="0,0,6,0"/>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="День" Binding="{Binding Date}" Width="155">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin"            Value="6,0,0,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Завтрак" Binding="{Binding Breakfast}" Width="2.3*" ElementStyle="{StaticResource MealText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding BreakfastBg}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Обед" Binding="{Binding Lunch}" Width="3*" ElementStyle="{StaticResource MealText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding LunchBg}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Полдник" Binding="{Binding Snack}" Width="1.4*" ElementStyle="{StaticResource MealText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding SnackBg}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Ужин" Binding="{Binding Dinner}" Width="2.8*" ElementStyle="{StaticResource MealText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding DinnerBg}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Ккал завтрак" Binding="{Binding CalBf}" Width="88" ElementStyle="{StaticResource CalText}"/>
+                        <DataGridTextColumn Header="Ккал обед"    Binding="{Binding CalLn}" Width="80" ElementStyle="{StaticResource CalText}"/>
+                        <DataGridTextColumn Header="Ккал полдник" Binding="{Binding CalSn}" Width="80" ElementStyle="{StaticResource CalText}"/>
+                        <DataGridTextColumn Header="Ккал ужин"    Binding="{Binding CalDn}" Width="80" ElementStyle="{StaticResource CalText}"/>
+
+                        <DataGridTextColumn Header="Ккал/день" Binding="{Binding CalDay}" Width="82">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment"   Value="Center"/>
+                                    <Setter Property="FontWeight"          Value="Bold"/>
+                                    <Setter Property="Foreground"          Value="{Binding CalDayBrush}"/>
+                                    <Setter Property="Margin"              Value="0,0,6,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Норма ккал" Binding="{Binding CalNorm}" Width="85">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment"   Value="Center"/>
+                                    <Setter Property="Foreground"          Value="{Binding CalNormBrush}"/>
+                                    <Setter Property="Margin"              Value="0,0,6,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="~Стоим. грн" Binding="{Binding DayCost}" Width="90">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment"   Value="Center"/>
+                                    <Setter Property="Foreground"          Value="{Binding DayCostBrush}"/>
+                                    <Setter Property="Margin"              Value="0,0,6,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
             </TabItem>
             <TabItem Header="  Продукты  ">
                 <Grid x:Name="ProductsHost"/>

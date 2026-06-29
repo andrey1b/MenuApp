@@ -73,4 +73,61 @@
         </Setter>
     </Style>
 
+    <!-- ═══════════════ Общие стили таблиц (DataGrid) для миграции на WPF ═══════════════ -->
+
+    <!-- Заголовок колонки: тёмно-зелёный фон, белый жирный текст, по центру -->
+    <Style x:Key="GridHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background"           Value="#2C5F2D"/>
+        <Setter Property="Foreground"           Value="White"/>
+        <Setter Property="FontWeight"           Value="Bold"/>
+        <Setter Property="FontSize"             Value="13"/>
+        <Setter Property="Height"               Value="42"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment"   Value="Center"/>
+        <Setter Property="BorderBrush"          Value="#1E3A1E"/>
+        <Setter Property="BorderThickness"      Value="0,0,1,0"/>
+        <Setter Property="SeparatorBrush"       Value="#1E3A1E"/>
+    </Style>
+
+    <!-- Строка таблицы: чередование (AliceBlue) + особая строка ИТОГО (тёмная, белый жирный) -->
+    <Style x:Key="GridRow" TargetType="DataGridRow">
+        <Setter Property="Background" Value="White"/>
+        <Style.Triggers>
+            <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                <Setter Property="Background" Value="AliceBlue"/>
+            </Trigger>
+            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                <Setter Property="Background" Value="#1E3A1E"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Базовая таблица: read-only, без сортировки/добавления, зелёные линии сетки -->
+    <Style x:Key="GridBase" TargetType="DataGrid">
+        <Setter Property="AutoGenerateColumns"      Value="False"/>
+        <Setter Property="IsReadOnly"               Value="True"/>
+        <Setter Property="HeadersVisibility"        Value="Column"/>
+        <Setter Property="SelectionMode"            Value="Single"/>
+        <Setter Property="SelectionUnit"            Value="FullRow"/>
+        <Setter Property="CanUserAddRows"           Value="False"/>
+        <Setter Property="CanUserDeleteRows"        Value="False"/>
+        <Setter Property="CanUserResizeRows"        Value="False"/>
+        <Setter Property="CanUserSortColumns"       Value="False"/>
+        <Setter Property="CanUserReorderColumns"    Value="False"/>
+        <Setter Property="GridLinesVisibility"      Value="All"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="#A8D5A9"/>
+        <Setter Property="VerticalGridLinesBrush"   Value="#A8D5A9"/>
+        <Setter Property="Background"               Value="White"/>
+        <Setter Property="RowBackground"            Value="White"/>
+        <Setter Property="BorderThickness"          Value="0"/>
+        <Setter Property="FontFamily"               Value="Segoe UI"/>
+        <Setter Property="FontSize"                 Value="13"/>
+        <Setter Property="MinRowHeight"             Value="40"/>
+        <Setter Property="AlternationCount"         Value="2"/>
+        <Setter Property="ColumnHeaderStyle"        Value="{StaticResource GridHeader}"/>
+        <Setter Property="RowStyle"                 Value="{StaticResource GridRow}"/>
+    </Style>
+
 </ResourceDictionary>

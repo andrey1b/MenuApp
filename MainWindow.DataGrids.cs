@@ -18,7 +18,6 @@ public partial class MainWindow
 {
     // ══════════════════════════════════════════════════ ПОЛЯ ДАННЫХ
 
-    private SWF.DataGridView dgvMenu          = null!;
     private SWF.DataGridView dgvProducts      = null!;
     private SWF.Label        lblBudgetStatus  = null!;
     private SWF.DataGridView dgvShoppingToday    = null!;
@@ -59,7 +58,6 @@ public partial class MainWindow
             grid.Children.Add(host);
         }
 
-        AddHost(MenuHost,       CreateMenuTabPanel());
         AddHost(ProductsHost,   CreateProductsTabPanel());
         AddHost(ShoppingHost,   CreateShoppingTabPanel());
         AddHost(WeeklyHost,     CreateWeeklyTabPanel());
@@ -70,65 +68,8 @@ public partial class MainWindow
     }
 
     // ══════════════════════════════════════════════════ МЕНЮ
-
-    private SWF.Panel CreateMenuTabPanel()
-    {
-        dgvMenu = new SWF.DataGridView
-        {
-            Dock = SWF.DockStyle.Fill,
-            ReadOnly = true,
-            AllowUserToAddRows = false,
-            AllowUserToResizeRows = false,
-            SelectionMode = SWF.DataGridViewSelectionMode.FullRowSelect,
-            MultiSelect = false,
-            RowHeadersVisible = false,
-            AutoSizeColumnsMode = SWF.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = SD.Color.White,
-            BorderStyle = SWF.BorderStyle.None,
-            Font = new SD.Font("Segoe UI", 13),
-            GridColor = SD.Color.FromArgb(168, 213, 169),
-            ColumnHeadersDefaultCellStyle = new SWF.DataGridViewCellStyle
-            {
-                BackColor = SD.Color.FromArgb(44, 95, 45),
-                ForeColor = SD.Color.White,
-                Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-                Alignment = SWF.DataGridViewContentAlignment.MiddleCenter
-            },
-            AlternatingRowsDefaultCellStyle = new SWF.DataGridViewCellStyle { BackColor = SD.Color.AliceBlue },
-            RowTemplate = { Height = 40 }
-        };
-        dgvMenu.ColumnHeadersHeightSizeMode = SWF.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgvMenu.ColumnHeadersHeight = 42;
-        dgvMenu.EnableHeadersVisualStyles = false;
-
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn
-        { Name = "Date",     HeaderText = "День",      Width = 155, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Breakfast", HeaderText = "Завтрак",  FillWeight = 23 });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Lunch",     HeaderText = "Обед",     FillWeight = 30 });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Snack",     HeaderText = "Полдник",  FillWeight = 14 });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "Dinner",    HeaderText = "Ужин",     FillWeight = 28 });
-
-        var calStyle = new SWF.DataGridViewCellStyle
-        { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, ForeColor = SD.Color.DimGray };
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalBf",  HeaderText = "Ккал завтрак", Width = 88, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true, DefaultCellStyle = calStyle });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalLn",  HeaderText = "Ккал обед",    Width = 80, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true, DefaultCellStyle = calStyle });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalSn",  HeaderText = "Ккал полдник", Width = 80, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true, DefaultCellStyle = calStyle });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalDn",  HeaderText = "Ккал ужин",    Width = 80, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true, DefaultCellStyle = calStyle });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalDay", HeaderText = "Ккал/день", Width = 82, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold) } });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "CalNorm", HeaderText = "Норма ккал", Width = 85, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, ForeColor = SD.Color.FromArgb(44, 95, 45) } });
-        dgvMenu.Columns.Add(new SWF.DataGridViewTextBoxColumn { Name = "DayCost", HeaderText = "~Стоим. грн", Width = 90, AutoSizeMode = SWF.DataGridViewAutoSizeColumnMode.None, ReadOnly = true,
-            DefaultCellStyle = new SWF.DataGridViewCellStyle { Alignment = SWF.DataGridViewContentAlignment.MiddleRight, ForeColor = SD.Color.DarkGreen } });
-
-        foreach (SWF.DataGridViewColumn col in dgvMenu.Columns) col.SortMode = SWF.DataGridViewColumnSortMode.NotSortable;
-        dgvMenu.DefaultCellStyle.WrapMode = SWF.DataGridViewTriState.True;
-        dgvMenu.AutoSizeRowsMode = SWF.DataGridViewAutoSizeRowsMode.AllCells;
-
-        var panel = new SWF.Panel { Dock = SWF.DockStyle.Fill };
-        panel.Controls.Add(dgvMenu);
-        return panel;
-    }
+    // Вкладка «Меню» переведена на нативный WPF DataGrid (dgMenu в MainWindow.xaml).
+    // Заполняется в FillMenuTab() через коллекцию MenuRow (см. MenuRow.cs).
 
     // ══════════════════════════════════════════════════ ПРОДУКТЫ
 
@@ -685,8 +626,8 @@ public partial class MainWindow
 
     private void FillMenuTab()
     {
-        dgvMenu.Rows.Clear();
-        if (mealPlan.Count == 0) return;
+        var rows = new List<MenuRow>();
+        if (mealPlan.Count == 0) { dgMenu.ItemsSource = rows; return; }
 
         int normPerPerson = calorieNorm;
         var culture = new CultureInfo("ru-RU");
@@ -707,7 +648,7 @@ public partial class MainWindow
                     raw += EstimatePrice(name, grams * familyCount);
             days.Add((d, meal, bf, ln, sn, dn, bf + ln + sn + dn, raw));
         }
-        if (days.Count == 0) return;
+        if (days.Count == 0) { dgMenu.ItemsSource = rows; return; }
 
         decimal perDay   = budget / days.Count;
         decimal totalRaw = days.Sum(x => x.raw);
@@ -744,34 +685,38 @@ public partial class MainWindow
         {
             var (d, meal, bf, ln, sn, dn, _, _) = days[i];
             decimal dayCost = scaledCost[i]; int dayCal = scaledKcal[i];
-            int rowIdx = dgvMenu.Rows.Add(
-                d.ToString("d MMMM (ddd)", culture), meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner,
-                bf > 0 ? bf.ToString() : "", ln > 0 ? ln.ToString() : "", sn > 0 ? sn.ToString() : "", dn > 0 ? dn.ToString() : "",
-                dayCal > 0 ? dayCal.ToString() : "", normPerPerson.ToString(), $"~{dayCost:F0}");
-            if (dayCal > 0)
-                dgvMenu.Rows[rowIdx].Cells["CalDay"].Style.ForeColor =
-                    dayCal >= normPerPerson ? SD.Color.DarkGreen : dayCal >= 1500 ? SD.Color.DarkOrange : SD.Color.Crimson;
-            var rowRef = dgvMenu.Rows[rowIdx];
-            var unknownBg = SD.Color.FromArgb(255, 243, 205);
-            if (!string.IsNullOrWhiteSpace(meal.Breakfast) && bf == 0) rowRef.Cells["Breakfast"].Style.BackColor = unknownBg;
-            if (!string.IsNullOrWhiteSpace(meal.Lunch)    && ln == 0) rowRef.Cells["Lunch"].Style.BackColor     = unknownBg;
-            if (!string.IsNullOrWhiteSpace(meal.Snack)    && sn == 0) rowRef.Cells["Snack"].Style.BackColor     = unknownBg;
-            if (!string.IsNullOrWhiteSpace(meal.Dinner)   && dn == 0) rowRef.Cells["Dinner"].Style.BackColor    = unknownBg;
+            rows.Add(new MenuRow
+            {
+                Date      = d.ToString("d MMMM (ddd)", culture),
+                Breakfast = meal.Breakfast, Lunch = meal.Lunch, Snack = meal.Snack, Dinner = meal.Dinner,
+                CalBf = bf > 0 ? bf.ToString() : "", CalLn = ln > 0 ? ln.ToString() : "",
+                CalSn = sn > 0 ? sn.ToString() : "", CalDn = dn > 0 ? dn.ToString() : "",
+                CalDay  = dayCal > 0 ? dayCal.ToString() : "",
+                CalNorm = normPerPerson.ToString(),
+                DayCost = $"~{dayCost:F0}",
+                CalDayBrush = MenuBrushes.CalDay(dayCal, normPerPerson),
+                BreakfastBg = MenuBrushes.MealBg(meal.Breakfast, bf),
+                LunchBg     = MenuBrushes.MealBg(meal.Lunch,     ln),
+                SnackBg     = MenuBrushes.MealBg(meal.Snack,     sn),
+                DinnerBg    = MenuBrushes.MealBg(meal.Dinner,    dn),
+            });
             totalCal += dayCal; totalCost += dayCost;
         }
 
         long normTotal = (long)normPerPerson * days.Count;
-        int totIdx = dgvMenu.Rows.Add(
-            $"ИТОГО ({days.Count} дн.)", "", "", "", "", "", "", "", "",
-            totalCal > 0 ? totalCal.ToString("N0") : "", normTotal.ToString("N0"), $"~{totalCost:F0}");
-        var totRow = dgvMenu.Rows[totIdx];
-        totRow.ReadOnly = true;
-        totRow.DefaultCellStyle.BackColor = SD.Color.FromArgb(30, 58, 30);
-        totRow.DefaultCellStyle.ForeColor = SD.Color.White;
-        totRow.DefaultCellStyle.Font      = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold);
-        totRow.Cells["CalDay"].Style.ForeColor  = SD.Color.FromArgb(150, 220, 150);
-        totRow.Cells["DayCost"].Style.ForeColor = SD.Color.FromArgb(130, 230, 130);
-        totRow.Cells["CalNorm"].Style.ForeColor = SD.Color.FromArgb(140, 190, 255);
+        rows.Add(new MenuRow
+        {
+            Date    = $"ИТОГО ({days.Count} дн.)",
+            CalDay  = totalCal > 0 ? totalCal.ToString("N0") : "",
+            CalNorm = normTotal.ToString("N0"),
+            DayCost = $"~{totalCost:F0}",
+            IsTotal = true,
+            CalDayBrush  = MenuBrushes.TotCalDay,
+            DayCostBrush = MenuBrushes.TotCost,
+            CalNormBrush = MenuBrushes.TotNorm,
+        });
+
+        dgMenu.ItemsSource = rows;
     }
 
     private void FillProductsTab()
