@@ -678,7 +678,9 @@ public partial class MainWindow
         }
 
         string dateStr = today.ToString("ddd, d MMM", culture);
-        TxDayDate.Text = meal != null ? $"{dateStr}  |  {totalCal} ккал" : $"{dateStr}  |  вне плана";
+        TxDayDate.Text = meal != null
+            ? $"{dateStr}  |  ~{totalCost:F0} грн  |  {totalCal} ккал"
+            : $"{dateStr}  |  вне плана";
     }
 
     private void FillMenuTab()

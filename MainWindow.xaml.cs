@@ -384,7 +384,7 @@ public partial class MainWindow : Window
         decimal pb     = PeriodBudget;
         TxBudget.Text =
             $"Бюджет: {monthlyBudget:N0} грн/мес  |  Семья: {familyCount} чел.  |  " +
-            $"Период {periodDays} дн.: {pb:N0} грн  |  В день: {pb / Math.Max(1, periodDays):N0} грн";
+            $"Период {periodDays} дн.: {pb:N0} грн  |  В день в среднем: {pb / Math.Max(1, periodDays):N0} грн.";
 
         decimal minCost   = CalcTierBudget(MinimumBasket);
         decimal basicCost = CalcTierBudget(BasicBasket);

@@ -37,10 +37,11 @@ public partial class MainWindow
 
     // ══════════════════════════════════════════════════ ПОЛЯ
 
-    private SWF.TextBox      txAiQuestion  = null!;
-    private SWF.Label        lblAiStatus   = null!;
-    private SWF.RichTextBox[] txAiResponse = null!;
-    private SWF.CheckBox[]   cbAiEnabled   = null!;
+    private SWF.TextBox       txAiQuestion  = null!;
+    private SWF.Label         lblAiStatus   = null!;
+    private SWF.RichTextBox[] txAiResponse  = null!;
+    private SWF.CheckBox[]    cbAiEnabled   = null!;
+    private SWF.Label[]       lblAiStats    = null!;
 
     private string _geminiApiKey    = "";
     private string _deepSeekApiKey  = "";
@@ -52,6 +53,7 @@ public partial class MainWindow
     {
         txAiResponse = new SWF.RichTextBox[AiList.Length];
         cbAiEnabled  = new SWF.CheckBox[AiList.Length];
+        lblAiStats   = new SWF.Label[AiList.Length];
 
         var outer = new SWF.Panel { Dock = SWF.DockStyle.Fill };
         outer.Controls.Add(BuildAiScrollArea());
@@ -65,24 +67,24 @@ public partial class MainWindow
     {
         var top = new SWF.Panel
         {
-            Dock = SWF.DockStyle.Top, Height = 80,
+            Dock = SWF.DockStyle.Top, Height = 90,
             BackColor = SD.Color.FromArgb(238, 248, 238)
         };
 
-        // TableLayoutPanel: надёжно растягивается вместе с окном
         var grid = new SWF.TableLayoutPanel
         {
             Dock = SWF.DockStyle.Fill,
             ColumnCount = 5, RowCount = 2,
-            Padding = new SWF.Padding(8, 8, 8, 0)
+            Padding = new SWF.Padding(10, 8, 10, 4)
         };
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 82));   // «Вопрос:»
+        // Колонки: метка | поле вопроса | 3 кнопки фиксированной ширины
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 110));  // «Вопрос:»
         grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));   // TextBox
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 160));  // Спросить
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 175));  // Сохранить все
-        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 145));  // API ключи
-        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 50));
-        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 22));
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 155));  // Спросить
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 165));  // Сохранить все
+        grid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 135));  // API ключи
+        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 58));  // кнопки
+        grid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, 22));  // статус
 
         var lblQ = new SWF.Label
         {
@@ -93,76 +95,65 @@ public partial class MainWindow
 
         txAiQuestion = new SWF.TextBox
         {
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(6, 6, 6, 6),
+            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(6, 8, 6, 8),
             Font = new SD.Font("Segoe UI", 13),
             BorderStyle = SWF.BorderStyle.FixedSingle
         };
 
-        var btnAsk = new SWF.Button
-        {
-            Text = "▶  Спросить",
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 4, 6),
-            Font = new SD.Font("Segoe UI", 13, SD.FontStyle.Bold),
-            BackColor = SD.Color.FromArgb(44, 95, 45), ForeColor = SD.Color.White,
-            FlatStyle = SWF.FlatStyle.Flat
-        };
-        btnAsk.FlatAppearance.BorderSize = 0;
-
-        var btnSaveAll = new SWF.Button
-        {
-            Text = "💾  Сохранить все",
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 4, 6),
-            Font = new SD.Font("Segoe UI", 12),
-            BackColor = SD.Color.FromArgb(200, 228, 200), ForeColor = SD.Color.FromArgb(30, 70, 30),
-            FlatStyle = SWF.FlatStyle.Flat
-        };
-        btnSaveAll.FlatAppearance.BorderSize = 1;
-
-        var btnApiKeys = new SWF.Button
-        {
-            Text = "⚙  API ключи",
-            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 8, 6),
-            Font = new SD.Font("Segoe UI", 12),
-            BackColor = SD.Color.FromArgb(220, 224, 240), ForeColor = SD.Color.FromArgb(40, 50, 100),
-            FlatStyle = SWF.FlatStyle.Flat
-        };
-        btnApiKeys.FlatAppearance.BorderSize = 1;
+        // Кнопки: FlatStyle.System — нативный скруглённый вид Windows 11
+        var btnAsk = MakeTopBtn("▶  Спросить",
+            SD.Color.FromArgb(44, 95, 45), SD.Color.White);
+        var btnSaveAll = MakeTopBtn("💾  Сохранить все",
+            SD.Color.FromArgb(195, 228, 195), SD.Color.FromArgb(30, 70, 30));
+        var btnApiKeys = MakeTopBtn("⚙  API ключи",
+            SD.Color.FromArgb(218, 222, 240), SD.Color.FromArgb(40, 50, 110));
 
         lblAiStatus = new SWF.Label
         {
             Dock = SWF.DockStyle.Fill,
             Font = new SD.Font("Segoe UI", 10), ForeColor = SD.Color.DimGray,
-            TextAlign = SD.ContentAlignment.MiddleLeft, Padding = new SWF.Padding(82, 0, 0, 0)
+            TextAlign = SD.ContentAlignment.MiddleLeft,
+            Padding = new SWF.Padding(110, 0, 0, 0)
         };
 
         btnAsk.Click     += async (_, _) => await AskAllAisAsync();
         btnSaveAll.Click += (_, _) => SaveAllResponses();
         btnApiKeys.Click += (_, _) => ShowApiKeyDialog();
-
         txAiQuestion.KeyDown += (_, e) =>
         {
             if (e.KeyCode == SWF.Keys.Enter) { e.SuppressKeyPress = true; btnAsk.PerformClick(); }
         };
 
-        // Ряд 0: поле вопроса + кнопки
-        grid.Controls.Add(lblQ,          0, 0);
-        grid.Controls.Add(txAiQuestion,  1, 0);
-        grid.Controls.Add(btnAsk,        2, 0);
-        grid.Controls.Add(btnSaveAll,    3, 0);
-        grid.Controls.Add(btnApiKeys,    4, 0);
-        // Ряд 1: статус (span 5 колонок)
-        grid.Controls.Add(lblAiStatus,   0, 1);
+        grid.Controls.Add(lblQ,         0, 0);
+        grid.Controls.Add(txAiQuestion, 1, 0);
+        grid.Controls.Add(btnAsk,       2, 0);
+        grid.Controls.Add(btnSaveAll,   3, 0);
+        grid.Controls.Add(btnApiKeys,   4, 0);
+        grid.Controls.Add(lblAiStatus,  0, 1);
         grid.SetColumnSpan(lblAiStatus, 5);
 
         top.Controls.Add(grid);
         return top;
     }
 
+    private static SWF.Button MakeTopBtn(string text, SD.Color bg, SD.Color fg) =>
+        new SWF.Button
+        {
+            Text = text,
+            Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(4, 6, 4, 6),
+            Font = new SD.Font("Segoe UI", 12, SD.FontStyle.Bold),
+            BackColor = bg, ForeColor = fg,
+            FlatStyle = SWF.FlatStyle.Flat,
+            FlatAppearance = { BorderSize = 0 },
+            UseVisualStyleBackColor = false
+        };
+
     // ── Прокручиваемая область с рядами ИИ ───────────
 
     private SWF.Panel BuildAiScrollArea()
     {
-        const int RowH = 90;
+        const int RowH   = 180;  // ~вдвое больше прежнего
+        const int StatsH = 22;   // строка статистики под текстбоксом
 
         var scroll = new SWF.Panel
         {
@@ -171,29 +162,27 @@ public partial class MainWindow
             BackColor = SD.Color.FromArgb(245, 250, 245)
         };
 
-        // TableLayoutPanel: Dock=Top + AutoSize растягивается по ширине scroll
         var table = new SWF.TableLayoutPanel
         {
-            Dock        = SWF.DockStyle.Top,
-            ColumnCount = 3, RowCount = AiList.Length,
-            BackColor   = SD.Color.Transparent,
-            Padding     = new SWF.Padding(6, 4, 6, 4),
-            AutoSize    = true,
+            Dock         = SWF.DockStyle.Top,
+            ColumnCount  = 3, RowCount = AiList.Length,
+            BackColor    = SD.Color.Transparent,
+            Padding      = new SWF.Padding(6, 4, 6, 4),
+            AutoSize     = true,
             AutoSizeMode = SWF.AutoSizeMode.GrowAndShrink
         };
-        // 15% кнопка ИИ | 70% текстбокс | 15% чекбокс+сохранить
         table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 15));
         table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 70));
         table.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 15));
         for (int i = 0; i < AiList.Length; i++)
-            table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, RowH));
+            table.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, RowH + StatsH));
 
         for (int i = 0; i < AiList.Length; i++)
         {
-            int   idx        = i;
-            var  (name, url, _) = AiList[i];
+            int  idx        = i;
+            var (name, url, _) = AiList[i];
 
-            // Кнопка ИИ (15%)
+            // ── Кнопка ИИ (15%) ─────────────────────────
             var btnAi = new SWF.Button
             {
                 Text      = name,
@@ -208,11 +197,21 @@ public partial class MainWindow
             btnAi.Click += (_, _) =>
                 Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
 
-            // Текстбокс ответа (70%)
+            // ── Центральная ячейка (70%): текстбокс + строка статистики ──
+            var centerPanel = new SWF.TableLayoutPanel
+            {
+                Dock        = SWF.DockStyle.Fill,
+                Margin      = new SWF.Padding(3, 5, 3, 2),
+                ColumnCount = 1, RowCount = 2,
+                BackColor   = SD.Color.Transparent
+            };
+            centerPanel.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
+            centerPanel.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100));
+            centerPanel.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Absolute, StatsH));
+
             txAiResponse[i] = new SWF.RichTextBox
             {
                 Dock        = SWF.DockStyle.Fill,
-                Margin      = new SWF.Padding(3, 5, 3, 5),
                 Font        = new SD.Font("Segoe UI", 11),
                 ScrollBars  = SWF.RichTextBoxScrollBars.Both,
                 WordWrap    = true,
@@ -221,47 +220,77 @@ public partial class MainWindow
                 BorderStyle = SWF.BorderStyle.FixedSingle
             };
 
-            // Правая ячейка (15%): TableLayoutPanel 1×2
+            lblAiStats[i] = new SWF.Label
+            {
+                Dock      = SWF.DockStyle.Fill,
+                Text      = "Символов: 0 | Слов: 0",
+                Font      = new SD.Font("Segoe UI", 9),
+                ForeColor = SD.Color.Gray,
+                TextAlign = SD.ContentAlignment.MiddleLeft,
+                Padding   = new SWF.Padding(4, 0, 0, 0)
+            };
+
+            int captIdx = i;
+            txAiResponse[i].TextChanged += (_, _) => UpdateAiStats(captIdx);
+
+            centerPanel.Controls.Add(txAiResponse[i], 0, 0);
+            centerPanel.Controls.Add(lblAiStats[i],   0, 1);
+
+            // ── Правая ячейка (15%): чекбокс + кнопка «Сохранить» горизонтально ──
             var rightGrid = new SWF.TableLayoutPanel
             {
                 Dock        = SWF.DockStyle.Fill,
                 Margin      = new SWF.Padding(3, 5, 5, 5),
-                ColumnCount = 1, RowCount = 2,
+                ColumnCount = 2, RowCount = 1,
                 BackColor   = SD.Color.Transparent
             };
+            rightGrid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Absolute, 32));
             rightGrid.ColumnStyles.Add(new SWF.ColumnStyle(SWF.SizeType.Percent, 100));
-            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 45));
-            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 55));
+            rightGrid.RowStyles.Add(new SWF.RowStyle(SWF.SizeType.Percent, 100));
 
             cbAiEnabled[i] = new SWF.CheckBox
             {
-                Text = "Включить", Dock = SWF.DockStyle.Fill,
-                Font = new SD.Font("Segoe UI", 12), Checked = true,
+                Text      = "",
+                Dock      = SWF.DockStyle.Fill,
+                Font      = new SD.Font("Segoe UI", 12),
+                Checked   = true,
                 ForeColor = SD.Color.FromArgb(30, 70, 30),
-                TextAlign = SD.ContentAlignment.MiddleLeft
+                TextAlign = SD.ContentAlignment.MiddleCenter
             };
 
             var btnSave = new SWF.Button
             {
-                Text = "💾  Сохранить",
-                Dock = SWF.DockStyle.Fill, Margin = new SWF.Padding(0, 2, 0, 0),
-                Font = new SD.Font("Segoe UI", 11),
-                BackColor = SD.Color.FromArgb(200, 228, 200), ForeColor = SD.Color.FromArgb(30, 70, 30),
+                Text      = "💾 Сохранить",
+                Dock      = SWF.DockStyle.Fill,
+                Margin    = new SWF.Padding(4, 0, 0, 0),
+                Font      = new SD.Font("Segoe UI", 11),
+                BackColor = SD.Color.FromArgb(200, 228, 200),
+                ForeColor = SD.Color.FromArgb(30, 70, 30),
                 FlatStyle = SWF.FlatStyle.Flat
             };
             btnSave.FlatAppearance.BorderSize = 1;
             btnSave.Click += (_, _) => SaveSingleResponse(idx);
 
             rightGrid.Controls.Add(cbAiEnabled[i], 0, 0);
-            rightGrid.Controls.Add(btnSave,         0, 1);
+            rightGrid.Controls.Add(btnSave,         1, 0);
 
-            table.Controls.Add(btnAi,           0, i);
-            table.Controls.Add(txAiResponse[i], 1, i);
-            table.Controls.Add(rightGrid,        2, i);
+            table.Controls.Add(btnAi,       0, i);
+            table.Controls.Add(centerPanel, 1, i);
+            table.Controls.Add(rightGrid,   2, i);
         }
 
         scroll.Controls.Add(table);
         return scroll;
+    }
+
+    private void UpdateAiStats(int idx)
+    {
+        string text  = txAiResponse[idx].Text;
+        int    chars = text.Length;
+        int    words = string.IsNullOrWhiteSpace(text)
+            ? 0
+            : text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        lblAiStats[idx].Text = $"Символов: {chars:N0} | Слов: {words:N0}";
     }
 
     // ══════════════════════════════════════════════════ ЛОГИКА «СПРОСИТЬ»
@@ -608,7 +637,7 @@ public partial class MainWindow
             if (string.IsNullOrEmpty(apiId)) continue;
             string? key = ApiKeyFor(apiId);
             bool has = !string.IsNullOrEmpty(key);
-            cbAiEnabled[i].Text = has ? "Включить (API ✓)" : "Включить";
+            cbAiEnabled[i].Text      = "";  // без надписи
             cbAiEnabled[i].ForeColor = has ? SD.Color.FromArgb(20, 100, 20) : SD.Color.FromArgb(30, 70, 30);
         }
     }
