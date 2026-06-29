@@ -226,8 +226,8 @@ public partial class MainWindow
         var haItems = LoadSubcategoriesFromHomeAccounting();
         if (haItems.Count > 0)
         {
-            foreach (var name in haItems)
-                dgvShoppingList.Rows.Add(false, name, "1", "шт.");
+            foreach (var (name, unit) in haItems)
+                dgvShoppingList.Rows.Add(false, name, "1", unit);
             lblListSource.Text = $"📦 Из HomeAccounting: {haItems.Count} продуктов";
             lblListSource.ForeColor = SD.Color.FromArgb(40, 100, 40);
         }
@@ -240,29 +240,43 @@ public partial class MainWindow
         }
     }
 
-    private List<string> LoadSubcategoriesFromHomeAccounting()
+    private List<(string name, string unit)> LoadSubcategoriesFromHomeAccounting()
     {
         var dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "HomeAccounting", "homeaccounting.db");
-        if (!File.Exists(dbPath)) return new List<string>();
+        if (!File.Exists(dbPath)) return new List<(string, string)>();
 
-        var result = new List<string>();
+        var result = new List<(string, string)>();
         try
         {
             using var conn = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
             conn.Open();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT DISTINCT sc.name
-                FROM subcategories sc
-                JOIN categories c ON sc.category_id = c.id
-                WHERE c.type = 'expense'
-                  AND (c.name LIKE '%родукт%' OR c.name LIKE '%итани%')
-                ORDER BY sc.name";
+                WITH food_subs AS (
+                    SELECT DISTINCT sc.id, sc.name
+                    FROM subcategories sc
+                    JOIN categories c ON sc.category_id = c.id
+                    WHERE c.type = 'expense'
+                      AND (c.name LIKE '%родукт%' OR c.name LIKE '%итани%')
+                ),
+                unit_counts AS (
+                    SELECT fs.name, u.name AS unit_name,
+                           ROW_NUMBER() OVER (PARTITION BY fs.name ORDER BY COUNT(*) DESC) AS rn
+                    FROM expenses e
+                    JOIN food_subs fs ON e.subcategory_id = fs.id
+                    JOIN units u ON e.unit_id = u.id
+                    WHERE e.unit_id IS NOT NULL
+                    GROUP BY fs.name, u.name
+                )
+                SELECT DISTINCT fs.name, COALESCE(uc.unit_name, 'шт.') AS unit
+                FROM food_subs fs
+                LEFT JOIN unit_counts uc ON uc.name = fs.name AND uc.rn = 1
+                ORDER BY fs.name";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
-                result.Add(reader.GetString(0));
+                result.Add((reader.GetString(0), reader.GetString(1)));
         }
         catch { }
         return result;
