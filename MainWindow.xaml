@@ -111,6 +111,9 @@
             <TabItem Header="  Составить список  ">
                 <Grid x:Name="ShoppingListHost"/>
             </TabItem>
+            <TabItem Header="  Вопросы ИИ  ">
+                <Grid x:Name="AiQuestionsHost"/>
+            </TabItem>
 
         </TabControl>
 

@@ -69,6 +69,7 @@ public partial class MainWindow : Window
         EnsureDataFiles();
         ExcelPriceService.DataDirectory = AppDir;
         LoadSettings();
+        LoadAiSettings();
         periodStart = DateTime.Today;
         periodEnd   = DateTime.Today.AddDays(30);
         Loaded += OnLoaded;

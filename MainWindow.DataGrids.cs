@@ -66,6 +66,7 @@ public partial class MainWindow
         AddHost(MonthlyHost,    CreateMonthlyTabPanel());
         AddHost(RealPricesHost,   CreateRealPricesTabPanel());
         AddHost(ShoppingListHost, CreateShoppingListPanel());
+        AddHost(AiQuestionsHost,  CreateAiQuestionsPanel());
     }
 
     // ══════════════════════════════════════════════════ МЕНЮ
