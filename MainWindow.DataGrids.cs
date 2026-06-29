@@ -7,10 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using SWF    = System.Windows.Forms;
-using SWFI   = System.Windows.Forms.Integration;
 using SWC    = System.Windows.Controls;
-using SD     = System.Drawing;
 using WMedia = System.Windows.Media;
 
 namespace MenuApp;

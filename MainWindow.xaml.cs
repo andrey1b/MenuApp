@@ -5,14 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using SWF     = System.Windows.Forms;
-using SWFI    = System.Windows.Forms.Integration;
 using WpfBtn  = System.Windows.Controls.Button;
-// явные алиасы для WPF: перебиваем System.Drawing.*
-using Color          = System.Windows.Media.Color;
-using Brush          = System.Windows.Media.Brush;
-using Brushes        = System.Windows.Media.Brushes;
-using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace MenuApp;
 
