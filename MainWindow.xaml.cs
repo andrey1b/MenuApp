@@ -86,6 +86,8 @@ public partial class MainWindow : Window
         PopulateShoppingList();   // список продуктов для вкладки «Составить список» (после загрузки prices)
         UpdateBudgetLabel();
         ValidatePeriod();
+        cmbFoodPeriod.ItemsSource  = new[] { "Этот месяц", "Этот год", "Всё время" };
+        cmbFoodPeriod.SelectedIndex = 1;   // по умолчанию — этот год
         BuildFoodExpenses();      // фактические расходы из «Денег» (read-only)
 
         await InitWebViewAsync();
@@ -99,6 +101,9 @@ public partial class MainWindow : Window
 
     private void BuildFoodExpenses()
     {
+        // во время инициализации окна контролы могут ещё не существовать
+        if (lblFoodTotal is null) return;
+
         if (!HomeAccountingReader.IsAvailable)
         {
             lblFoodTotal.Text = "Расходы на продукты (из «Денег»)";
@@ -107,10 +112,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        var items = HomeAccountingReader.GetFoodExpenses();
+        // Фильтр периода: 0 — этот месяц, 1 — этот год, 2 — всё время
+        int period = cmbFoodPeriod?.SelectedIndex ?? 1;
+        string monthPrefix = DateTime.Today.ToString("yyyy-MM");
+        string yearPrefix  = DateTime.Today.ToString("yyyy");
+        string periodLabel = period == 0 ? "за этот месяц" : period == 1 ? "за этот год" : "за всё время";
+
+        var items = HomeAccountingReader.GetFoodExpenses()
+            .Where(e => period switch
+            {
+                0 => e.Date.StartsWith(monthPrefix, StringComparison.Ordinal),
+                1 => e.Date.StartsWith(yearPrefix,  StringComparison.Ordinal),
+                _ => true
+            })
+            .ToList();
         decimal total = HomeAccountingReader.Total(items);
 
-        lblFoodTotal.Text = $"Потрачено на продукты: {total:N2} грн";
+        lblFoodTotal.Text = $"Потрачено на продукты {periodLabel}: {total:N2} грн";
 
         var rows = items.Select(e =>
         {
@@ -121,11 +139,13 @@ public partial class MainWindow : Window
 
         dgFoodExpenses.ItemsSource = rows;
         lblFoodInfo.Text = rows.Count == 0
-            ? "Записей нет. Расходы ведутся в программе «Деньги» (категория «Продукты питания»)."
-            : $"Записей: {rows.Count}. Источник: «Деньги», только чтение.";
+            ? "Записей нет за выбранный период. Расходы ведутся в «Деньгах» (категория «Продукты питания»)."
+            : $"Записей: {rows.Count} ({periodLabel}). Источник: «Деньги», только чтение.";
     }
 
     private void BtnFoodRefresh_Click(object sender, RoutedEventArgs e) => BuildFoodExpenses();
+
+    private void CmbFoodPeriod_SelectionChanged(object sender, SelectionChangedEventArgs e) => BuildFoodExpenses();
 
     private void BtnFoodOpenMoney_Click(object sender, RoutedEventArgs e) => HomeAccountingReader.OpenHomeAccounting();
 

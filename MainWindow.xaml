@@ -611,6 +611,10 @@
                     <Border DockPanel.Dock="Top" Background="#EEF8EE" Padding="10,8">
                         <DockPanel LastChildFill="True">
                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <TextBlock Text="Период:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#5A5A5A"/>
+                                <ComboBox x:Name="cmbFoodPeriod" Width="140" Height="30" VerticalAlignment="Center"
+                                          VerticalContentAlignment="Center"
+                                          SelectionChanged="CmbFoodPeriod_SelectionChanged"/>
                                 <Button x:Name="btnFoodRefresh" Style="{StaticResource RoundBtn}"
                                         Content="🔄 Обновить" Background="#DADEF0" Foreground="#28326E"
                                         Margin="4,0,0,0" Click="BtnFoodRefresh_Click"/>
