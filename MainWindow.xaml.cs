@@ -147,6 +147,46 @@ public partial class MainWindow : Window
 
     private void CmbFoodPeriod_SelectionChanged(object sender, SelectionChangedEventArgs e) => BuildFoodExpenses();
 
+    // ─── «Записать в «Деньги»»: оплаченные покупки → очередь черновиков ───────
+
+    private void BtnToMoneyToday_Click(object sender, RoutedEventArgs e)    => PushPaidToMoney(dgShopToday);
+    private void BtnToMoneyTomorrow_Click(object sender, RoutedEventArgs e) => PushPaidToMoney(dgShopTomorrow);
+
+    // Собирает строки с заполненной колонкой «Заплачено» и кладёт их черновиками
+    // в общую очередь. Запись расхода сделают сами «Деньги» (правило офиса).
+    private void PushPaidToMoney(System.Windows.Controls.DataGrid dg)
+    {
+        var drafts = new List<ExpenseDraft>();
+        decimal sum = 0;
+        if (dg.ItemsSource is System.Collections.IEnumerable rows)
+            foreach (var o in rows)
+            {
+                if (o is not ShoppingRow r || r.IsTotal) continue;
+                if (decimal.TryParse(r.Paid, out var amt) && amt > 0 && !string.IsNullOrWhiteSpace(r.Product))
+                {
+                    string note = string.IsNullOrWhiteSpace(r.Quantity) ? r.Product : $"{r.Product} ({r.Quantity})";
+                    drafts.Add(new ExpenseDraft(Guid.NewGuid().ToString("N"), "Еда",
+                        DateTime.Today.ToString("yyyy-MM-dd"), "Продукты питания", null, (double)amt, note));
+                    sum += amt;
+                }
+            }
+
+        if (drafts.Count == 0)
+        {
+            MessageBox.Show(this,
+                "Нет оплаченных позиций.\nЗаполните колонку «Заплачено» — и эти суммы можно отправить в «Деньги».",
+                "Записать в «Деньги»", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        ExpenseDraftQueue.AddRange(drafts);
+        var ans = MessageBox.Show(this,
+            $"Отправлено в «Деньги»: {drafts.Count} поз. на {sum:N2} грн.\n\n" +
+            "Расходы запишутся в «Деньгах» (там нужно подтвердить). Открыть «Деньги» сейчас?",
+            "Записать в «Деньги»", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (ans == MessageBoxResult.Yes) HomeAccountingReader.OpenHomeAccounting();
+    }
+
     private void BtnFoodOpenMoney_Click(object sender, RoutedEventArgs e) => HomeAccountingReader.OpenHomeAccounting();
 
     // Дата из «Денег» хранится как yyyy-MM-dd → показываем dd.MM.yyyy

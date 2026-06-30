@@ -358,9 +358,13 @@
                             <Grid>
                                 <TextBlock x:Name="lblTodayTitle" HorizontalAlignment="Center" VerticalAlignment="Center"
                                            FontSize="14" FontWeight="Bold" Foreground="DarkSlateGray"/>
-                                <Button x:Name="btnCopyToday" Content="📋" Width="30" Height="30" FontSize="14"
-                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Скопировать список"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                                    <Button x:Name="btnToMoneyToday" Content="💰→" Width="40" Height="30" FontSize="13"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            ToolTip="Записать оплаченное в «Деньги»" Click="BtnToMoneyToday_Click"/>
+                                    <Button x:Name="btnCopyToday" Content="📋" Width="30" Height="30" FontSize="14"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Скопировать список"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
                         <DataGrid x:Name="dgShopToday" Style="{StaticResource GridBase}" IsReadOnly="False">
@@ -385,9 +389,13 @@
                             <Grid>
                                 <TextBlock x:Name="lblTomorrowTitle" HorizontalAlignment="Center" VerticalAlignment="Center"
                                            FontSize="14" FontWeight="Bold" Foreground="DarkSlateGray"/>
-                                <Button x:Name="btnCopyTomorrow" Content="📋" Width="30" Height="30" FontSize="14"
-                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Скопировать список"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                                    <Button x:Name="btnToMoneyTomorrow" Content="💰→" Width="40" Height="30" FontSize="13"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            ToolTip="Записать оплаченное в «Деньги»" Click="BtnToMoneyTomorrow_Click"/>
+                                    <Button x:Name="btnCopyTomorrow" Content="📋" Width="30" Height="30" FontSize="14"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Скопировать список"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
                         <DataGrid x:Name="dgShopTomorrow" Style="{StaticResource GridBase}" IsReadOnly="False">
