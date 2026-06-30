@@ -366,6 +366,7 @@ public partial class MainWindow : Window
 
         ValidatePeriod();
         UpdateBudgetLabel();
+        SelectMealPlan();
         FillMenuTab();
         FillProductsTab();
         FillShoppingTab();
@@ -442,6 +443,8 @@ public partial class MainWindow : Window
         familyCount   = dlg.FamilyCount;
         calorieNorm   = dlg.CalorieNorm;
         UpdateBudgetLabel();
+        SelectMealPlan();
+        FillMenuTab();
         FillDashboardTab();
         FillProductsTab();
         FillShoppingTab();

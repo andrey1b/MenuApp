@@ -31,7 +31,9 @@ public partial class MainWindow
     // Вкладка «Реальные цены» — WPF DataGrid dgRealPrices (MainWindow.xaml)
     private readonly ObservableCollection<RealPriceRow> realPrices = new();
 
-    private List<MealDay>   mealPlan = new();
+    private List<MealDay>   mealPlan         = new();   // активный план (выбран по бюджету)
+    private List<MealDay>   mealPlanStandard = new();   // «Стандарт» — из файла 30_day_meal_plan.txt
+    private string          mealTier         = "Стандарт";
     private List<PriceItem> prices   = new();
 
     private Dictionary<string, Dictionary<string, Dictionary<string, decimal>>> paidData = new();
@@ -152,6 +154,7 @@ public partial class MainWindow
         LoadPrices();
         LoadRealPrices();
         LoadPaidData();
+        SelectMealPlan();   // выбрать уровень рациона по бюджету
         FillDashboardTab();
         FillMenuTab();
         FillProductsTab();
@@ -163,9 +166,9 @@ public partial class MainWindow
 
     private void LoadMealPlan()
     {
-        mealPlan.Clear();
+        mealPlanStandard.Clear();
         string? path = FindDataFile("30_day_meal_plan.txt");
-        if (path == null) return;
+        if (path == null) { mealPlan = mealPlanStandard; return; }
         foreach (string line in File.ReadAllLines(path, System.Text.Encoding.UTF8))
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -173,8 +176,69 @@ public partial class MainWindow
             if (dash < 0) continue;
             string dateStr = line[..dash].Trim().TrimEnd('.').TrimEnd('г').TrimEnd().TrimEnd('.');
             string meals   = line[(dash + 1)..].Trim();
-            mealPlan.Add(new MealDay(dateStr.Trim(), ExtractMeal(meals, "Завтрак"), ExtractMeal(meals, "Обед"), ExtractMeal(meals, "Полдник"), ExtractMeal(meals, "Ужин")));
+            mealPlanStandard.Add(new MealDay(dateStr.Trim(), ExtractMeal(meals, "Завтрак"), ExtractMeal(meals, "Обед"), ExtractMeal(meals, "Полдник"), ExtractMeal(meals, "Ужин")));
         }
+        mealPlan = mealPlanStandard;   // до выбора по бюджету
+    }
+
+    // ── Уровни рациона: Эконом / Стандарт / Премиум ──────────────
+    // Эконом — крупы/овощи/картофель, минимум мяса; Премиум — мясо/рыба/сыр каждый день.
+    // Все блюда распознаются IngMap. Дата не важна (FindMealForDate берёт фактическую дату).
+    private static readonly List<MealDay> MealPlanEconomy = new()
+    {
+        new("", "Овсянка",                  "Картофельный суп",   "1 яблоко",   "Гречка с овощами"),
+        new("", "Манная каша",              "Гречневый суп",      "1 банан",    "Картофельное пюре"),
+        new("", "Рисовая каша",             "Щи",                 "1 яблоко",   "Тушёная капуста"),
+        new("", "Молочная каша",            "Вермишелевый суп",   "1 груша",    "Отварные макароны"),
+        new("", "Гречневая каша с молоком", "Суп-пюре из тыквы",  "1 яблоко",   "Жареная картошка"),
+        new("", "Хлеб с маслом",            "Картофельный суп",   "1 банан",    "Овощное рагу"),
+        new("", "Манная каша",              "Молочный суп",       "1 яблоко",   "Рис с овощами"),
+    };
+
+    private static readonly List<MealDay> MealPlanPremium = new()
+    {
+        new("", "Сырники со сметаной",            "Борщ",             "1 банан",  "Запечённая курица + картофельное пюре"),
+        new("", "Омлет",                          "Куриный суп",      "1 яблоко", "Рыба на пару + овощи на гриле"),
+        new("", "Бутерброды с сыром",             "Харчо",            "1 банан",  "Котлеты + картофельное пюре"),
+        new("", "Запеканка творожная",            "Плов с курицей",   "1 груша",  "Голубцы"),
+        new("", "Яичница",                        "Рыбный суп",       "1 яблоко", "Зразы"),
+        new("", "Творог со сметаной",             "Суп с чечевицей",  "1 банан",  "Пельмени"),
+        new("", "Яйца варёные + хлеб с маслом",   "Рис с курицей",    "1 яблоко", "Тефтели + рис"),
+    };
+
+    // Стоимость полноценного рациона варианта (порции доведены до нормы калорий), на семью за период
+    private decimal VariantRationCost(List<MealDay> plan)
+    {
+        if (plan.Count == 0) return decimal.MaxValue;
+        long baseCal = 0; decimal baseCost = 0; int days = 0;
+        int cycleLen = Math.Min(plan.Count, 7);
+        for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
+        {
+            int totalDays = (int)(d.Date - PlanStart).TotalDays;
+            int idx = ((totalDays % cycleLen) + cycleLen) % cycleLen;
+            var meal = plan[idx];
+            days++;
+            foreach (string t in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
+            {
+                baseCal += CalcMealCalories(t);
+                foreach (var (name, grams) in GetIngredients(t))
+                    baseCost += EstimatePrice(name, grams * familyCount);
+            }
+        }
+        if (days == 0 || baseCal == 0) return decimal.MaxValue;
+        decimal scaleToNorm = (decimal)calorieNorm * days / baseCal;
+        return baseCost * scaleToNorm;
+    }
+
+    // Выбрать самый «богатый» вариант, чей полноценный рацион укладывается в бюджет (иначе Эконом)
+    private void SelectMealPlan()
+    {
+        decimal budget = PeriodBudget;
+        if (mealPlanStandard.Count == 0) { mealPlan = mealPlanStandard; mealTier = "Стандарт"; return; }
+
+        if (VariantRationCost(MealPlanPremium) <= budget) { mealPlan = MealPlanPremium; mealTier = "Премиум"; }
+        else if (VariantRationCost(mealPlanStandard) <= budget) { mealPlan = mealPlanStandard; mealTier = "Стандарт"; }
+        else { mealPlan = MealPlanEconomy; mealTier = "Эконом"; }
     }
 
     private static string ExtractMeal(string text, string label)
@@ -358,14 +422,14 @@ public partial class MainWindow
         if (avgCal >= normPerPerson * 0.98m)
         {
             decimal free = Math.Max(0, budget - sCost);
-            lblMenuBudget.Text = $"  ✓ Полноценный рацион (~{normPerPerson} ккал/чел в день).  " +
+            lblMenuBudget.Text = $"  Уровень рациона: {mealTier}.  ✓ Полноценный рацион (~{normPerPerson} ккал/чел в день).  " +
                 $"Стоимость меню на {dayCount} дн.: ~{sCost:N0} грн из бюджета {budget:N0} грн.  Свободный остаток: ~{free:N0} грн.";
             lblMenuBudget.Foreground = WMedia.Brushes.DarkGreen;
         }
         else
         {
             int pct = normPerPerson > 0 ? (int)Math.Round(avgCal * 100m / normPerPerson) : 0;
-            lblMenuBudget.Text = $"  ⚠ Бюджета хватает на {pct}% нормы калорий (~{avgCal} из {normPerPerson} ккал/чел в день).  " +
+            lblMenuBudget.Text = $"  Уровень рациона: {mealTier}.  ⚠ Бюджета хватает на {pct}% нормы калорий (~{avgCal} из {normPerPerson} ккал/чел в день).  " +
                 $"Рацион урезан под бюджет: ~{sCost:N0} грн.";
             lblMenuBudget.Foreground = WMedia.Brushes.DarkOrange;
         }
