@@ -214,7 +214,7 @@ public partial class MainWindow
         string[] meals = meal != null ? new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner } : new[] { "", "", "", "" };
 
         int totalCal = 0; decimal totalCost = 0;
-        int pDays    = Math.Max(1, (int)(periodEnd - periodStart).TotalDays + 1);
+        decimal ps = MenuPortionScale();   // тот же масштаб порций, что и на вкладке «Меню»
 
         for (int i = 0; i < 4; i++)
         {
@@ -222,11 +222,11 @@ public partial class MainWindow
             _txMeal[i].Text = string.IsNullOrEmpty(text) ? "—" : text;
             if (!string.IsNullOrEmpty(text))
             {
-                int cal = CalcMealCalories(text);
+                int cal = (int)Math.Round(CalcMealCalories(text) * ps);
                 decimal cost = 0;
                 foreach (var (name, grams) in GetIngredients(text))
                     cost += EstimatePrice(name, grams * familyCount);
-                cost = Math.Round(cost, 0);
+                cost = Math.Round(cost * ps, 0);
                 _txCal[i].Text  = cal  > 0 ? $"{cal} кКал"    : "";
                 _txCost[i].Text = cost > 0 ? $"~{cost:F0} грн" : "";
                 totalCal += cal; totalCost += cost;
@@ -242,21 +242,48 @@ public partial class MainWindow
             : $"{dateStr}  |  вне плана";
     }
 
+    // Масштаб порций меню под бюджет: довести рацион до нормы калорий, но не дороже бюджета.
+    // Бюджета хватает → полноценный рацион (норма); не хватает → урезаем порции под бюджет.
+    private decimal MenuPortionScale()
+    {
+        long baseCal = 0; decimal baseCost = 0; int dayCount = 0;
+        for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
+        {
+            MealDay? meal = FindMealForDate(d);
+            if (meal == null) continue;
+            dayCount++;
+            foreach (string t in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
+            {
+                baseCal += CalcMealCalories(t);                       // на человека
+                foreach (var (name, grams) in GetIngredients(t))
+                    baseCost += EstimatePrice(name, grams * familyCount);  // на семью
+            }
+        }
+        if (dayCount == 0 || baseCal == 0) return 1m;
+
+        decimal scaleToNorm  = (decimal)calorieNorm * dayCount / baseCal;  // довести калории до нормы
+        decimal rationCost   = baseCost * scaleToNorm;                     // стоимость полноценного рациона
+        decimal budgetFactor = rationCost > 0 ? PeriodBudget / rationCost : 1m;
+        return scaleToNorm * Math.Min(1m, budgetFactor);
+    }
+
     private void FillMenuTab()
     {
         var rows = new List<MenuRow>();
-        if (mealPlan.Count == 0) { dgMenu.ItemsSource = rows; return; }
+        if (mealPlan.Count == 0) { dgMenu.ItemsSource = rows; lblMenuBudget.Text = ""; return; }
 
         int normPerPerson = calorieNorm;
         var culture = new CultureInfo("ru-RU");
+        decimal ps = MenuPortionScale();   // масштаб порций под бюджет/норму
 
-        // Цена приёма пищи (на семью): сумма стоимости ингредиентов × количество человек
-        decimal MealPrice(string mealText)
+        // Калории/цена приёма пищи с учётом масштаба (калории — на человека, цена — на семью)
+        int     SCal(string m)   => (int)Math.Round(CalcMealCalories(m) * ps);
+        decimal SPrice(string m)
         {
             decimal c = 0;
-            foreach (var (name, grams) in GetIngredients(mealText))
+            foreach (var (name, grams) in GetIngredients(m))
                 c += EstimatePrice(name, grams * familyCount);
-            return Math.Round(c, 0);
+            return Math.Round(c * ps, 0);
         }
 
         // Накопители для строки ИТОГО (суммы по колонкам)
@@ -270,16 +297,16 @@ public partial class MainWindow
             if (meal == null) continue;
             dayCount++;
 
-            int bf = CalcMealCalories(meal.Breakfast);
-            int ln = CalcMealCalories(meal.Lunch);
-            int sn = CalcMealCalories(meal.Snack);
-            int dn = CalcMealCalories(meal.Dinner);
+            int bf = SCal(meal.Breakfast);
+            int ln = SCal(meal.Lunch);
+            int sn = SCal(meal.Snack);
+            int dn = SCal(meal.Dinner);
             int dayCal = bf + ln + sn + dn;
 
-            decimal pBf = MealPrice(meal.Breakfast);
-            decimal pLn = MealPrice(meal.Lunch);
-            decimal pSn = MealPrice(meal.Snack);
-            decimal pDn = MealPrice(meal.Dinner);
+            decimal pBf = SPrice(meal.Breakfast);
+            decimal pLn = SPrice(meal.Lunch);
+            decimal pSn = SPrice(meal.Snack);
+            decimal pDn = SPrice(meal.Dinner);
             decimal dayCost = pBf + pLn + pSn + pDn;
 
             rows.Add(new MenuRow
@@ -304,7 +331,7 @@ public partial class MainWindow
             sPrBf += pBf; sPrLn += pLn; sPrSn += pSn; sPrDn += pDn;
             sCalDay += dayCal; sCost += dayCost;
         }
-        if (dayCount == 0) { dgMenu.ItemsSource = rows; return; }
+        if (dayCount == 0) { dgMenu.ItemsSource = rows; lblMenuBudget.Text = ""; return; }
 
         long normTotal = (long)normPerPerson * dayCount;
         rows.Add(new MenuRow
@@ -324,6 +351,24 @@ public partial class MainWindow
         });
 
         dgMenu.ItemsSource = rows;
+
+        // ── Сводка: рацион vs бюджет ─────────────────────────────
+        decimal budget = PeriodBudget;
+        int avgCal = (int)Math.Round((decimal)sCalDay / dayCount);   // ккал/чел в день (после масштаба)
+        if (avgCal >= normPerPerson * 0.98m)
+        {
+            decimal free = Math.Max(0, budget - sCost);
+            lblMenuBudget.Text = $"  ✓ Полноценный рацион (~{normPerPerson} ккал/чел в день).  " +
+                $"Стоимость меню на {dayCount} дн.: ~{sCost:N0} грн из бюджета {budget:N0} грн.  Свободный остаток: ~{free:N0} грн.";
+            lblMenuBudget.Foreground = WMedia.Brushes.DarkGreen;
+        }
+        else
+        {
+            int pct = normPerPerson > 0 ? (int)Math.Round(avgCal * 100m / normPerPerson) : 0;
+            lblMenuBudget.Text = $"  ⚠ Бюджета хватает на {pct}% нормы калорий (~{avgCal} из {normPerPerson} ккал/чел в день).  " +
+                $"Рацион урезан под бюджет: ~{sCost:N0} грн.";
+            lblMenuBudget.Foreground = WMedia.Brushes.DarkOrange;
+        }
     }
 
     private void FillProductsTab()

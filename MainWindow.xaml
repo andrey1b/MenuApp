@@ -91,7 +91,12 @@
             </TabItem>
 
             <TabItem Header="  Меню  ">
-                <DataGrid x:Name="dgMenu" Style="{StaticResource GridBase}"
+                <DockPanel>
+                    <Border DockPanel.Dock="Bottom" Background="White" BorderBrush="#A0A0A0" BorderThickness="0,1,0,0" MinHeight="34">
+                        <TextBlock x:Name="lblMenuBudget" VerticalAlignment="Center" Margin="4,4,4,4"
+                                   FontWeight="Bold" FontSize="12" TextWrapping="Wrap"/>
+                    </Border>
+                    <DataGrid x:Name="dgMenu" Style="{StaticResource GridBase}"
                           HorizontalScrollBarVisibility="Auto">
                     <DataGrid.Resources>
                         <!-- Текст ячеек с блюдами: перенос по словам, фон = подсветка «неизвестное блюдо» -->
@@ -196,7 +201,8 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                     </DataGrid.Columns>
-                </DataGrid>
+                    </DataGrid>
+                </DockPanel>
             </TabItem>
             <TabItem Header="  Продукты  ">
                 <DockPanel>
