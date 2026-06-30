@@ -1,5 +1,3 @@
-// Гибридный проект (UseWPF + UseWindowsForms): и System.Drawing, и System.Windows.Media
-// определяют Brush/Color → берём явно WPF-типы через алиасы.
 using Brush           = System.Windows.Media.Brush;
 using Brushes         = System.Windows.Media.Brushes;
 using Color           = System.Windows.Media.Color;
@@ -17,6 +15,11 @@ internal sealed class MenuRow
     public string Lunch     { get; init; } = "";
     public string Snack     { get; init; } = "";
     public string Dinner    { get; init; } = "";
+    // Цены по приёмам пищи (на семью), грн
+    public string PriceBf   { get; init; } = "";
+    public string PriceLn   { get; init; } = "";
+    public string PriceSn   { get; init; } = "";
+    public string PriceDn   { get; init; } = "";
     public string CalBf     { get; init; } = "";
     public string CalLn     { get; init; } = "";
     public string CalSn     { get; init; } = "";

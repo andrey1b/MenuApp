@@ -249,85 +249,74 @@ public partial class MainWindow
 
         int normPerPerson = calorieNorm;
         var culture = new CultureInfo("ru-RU");
-        decimal budget = PeriodBudget;
 
-        var days = new List<(DateTime d, MealDay meal, int bf, int ln, int sn, int dn, int tot, decimal raw)>();
+        // Цена приёма пищи (на семью): сумма стоимости ингредиентов × количество человек
+        decimal MealPrice(string mealText)
+        {
+            decimal c = 0;
+            foreach (var (name, grams) in GetIngredients(mealText))
+                c += EstimatePrice(name, grams * familyCount);
+            return Math.Round(c, 0);
+        }
+
+        // Накопители для строки ИТОГО (суммы по колонкам)
+        int sCalBf = 0, sCalLn = 0, sCalSn = 0, sCalDn = 0;
+        decimal sPrBf = 0, sPrLn = 0, sPrSn = 0, sPrDn = 0;
+        long sCalDay = 0; decimal sCost = 0; int dayCount = 0;
+
         for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
         {
             MealDay? meal = FindMealForDate(d);
             if (meal == null) continue;
+            dayCount++;
+
             int bf = CalcMealCalories(meal.Breakfast);
             int ln = CalcMealCalories(meal.Lunch);
             int sn = CalcMealCalories(meal.Snack);
             int dn = CalcMealCalories(meal.Dinner);
-            decimal raw = 0;
-            foreach (string t in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
-                foreach (var (name, grams) in GetIngredients(t))
-                    raw += EstimatePrice(name, grams * familyCount);
-            days.Add((d, meal, bf, ln, sn, dn, bf + ln + sn + dn, raw));
-        }
-        if (days.Count == 0) { dgMenu.ItemsSource = rows; return; }
+            int dayCal = bf + ln + sn + dn;
 
-        decimal perDay   = budget / days.Count;
-        decimal totalRaw = days.Sum(x => x.raw);
-        long rawCalSum   = days.Sum(x => (long)x.tot);
+            decimal pBf = MealPrice(meal.Breakfast);
+            decimal pLn = MealPrice(meal.Lunch);
+            decimal pSn = MealPrice(meal.Snack);
+            decimal pDn = MealPrice(meal.Dinner);
+            decimal dayCost = pBf + pLn + pSn + pDn;
 
-        var scaledCost = new decimal[days.Count];
-        if (totalRaw > 0)
-        {
-            int zeros     = days.Count(x => x.raw == 0);
-            decimal pool  = budget - zeros * perDay;
-            decimal scale = pool > 0 ? pool / totalRaw : 1m;
-            for (int i = 0; i < days.Count; i++)
-                scaledCost[i] = days[i].raw > 0 ? Math.Round(days[i].raw * scale, 0) : Math.Round(perDay, 0);
-        }
-        else { for (int i = 0; i < days.Count; i++) scaledCost[i] = Math.Round(perDay, 0); }
-        scaledCost[^1] += budget - scaledCost.Sum();
-
-        long targetKcal = ComputeProductsTotalKcal() / Math.Max(1, familyCount);
-        var scaledKcal  = new int[days.Count];
-        if (rawCalSum > 0)
-        {
-            int calZeros   = days.Count(x => x.tot == 0);
-            long perDayCal = targetKcal / days.Count;
-            long calPool   = targetKcal - calZeros * perDayCal;
-            decimal calSc  = calPool > 0 ? (decimal)calPool / rawCalSum : 1m;
-            for (int i = 0; i < days.Count; i++)
-                scaledKcal[i] = days[i].tot > 0 ? (int)Math.Round(days[i].tot * calSc) : (int)perDayCal;
-        }
-        else { long pdc = targetKcal / days.Count; for (int i = 0; i < days.Count; i++) scaledKcal[i] = (int)pdc; }
-        scaledKcal[^1] += (int)(targetKcal - scaledKcal.Sum());
-
-        long totalCal = 0; decimal totalCost = 0;
-        for (int i = 0; i < days.Count; i++)
-        {
-            var (d, meal, bf, ln, sn, dn, _, _) = days[i];
-            decimal dayCost = scaledCost[i]; int dayCal = scaledKcal[i];
             rows.Add(new MenuRow
             {
                 Date      = d.ToString("d MMMM (ddd)", culture),
                 Breakfast = meal.Breakfast, Lunch = meal.Lunch, Snack = meal.Snack, Dinner = meal.Dinner,
+                PriceBf = pBf > 0 ? $"~{pBf:F0}" : "", PriceLn = pLn > 0 ? $"~{pLn:F0}" : "",
+                PriceSn = pSn > 0 ? $"~{pSn:F0}" : "", PriceDn = pDn > 0 ? $"~{pDn:F0}" : "",
                 CalBf = bf > 0 ? bf.ToString() : "", CalLn = ln > 0 ? ln.ToString() : "",
                 CalSn = sn > 0 ? sn.ToString() : "", CalDn = dn > 0 ? dn.ToString() : "",
                 CalDay  = dayCal > 0 ? dayCal.ToString() : "",
                 CalNorm = normPerPerson.ToString(),
-                DayCost = $"~{dayCost:F0}",
+                DayCost = dayCost > 0 ? $"~{dayCost:F0}" : "",
                 CalDayBrush = MenuBrushes.CalDay(dayCal, normPerPerson),
                 BreakfastBg = MenuBrushes.MealBg(meal.Breakfast, bf),
                 LunchBg     = MenuBrushes.MealBg(meal.Lunch,     ln),
                 SnackBg     = MenuBrushes.MealBg(meal.Snack,     sn),
                 DinnerBg    = MenuBrushes.MealBg(meal.Dinner,    dn),
             });
-            totalCal += dayCal; totalCost += dayCost;
-        }
 
-        long normTotal = (long)normPerPerson * days.Count;
+            sCalBf += bf; sCalLn += ln; sCalSn += sn; sCalDn += dn;
+            sPrBf += pBf; sPrLn += pLn; sPrSn += pSn; sPrDn += pDn;
+            sCalDay += dayCal; sCost += dayCost;
+        }
+        if (dayCount == 0) { dgMenu.ItemsSource = rows; return; }
+
+        long normTotal = (long)normPerPerson * dayCount;
         rows.Add(new MenuRow
         {
-            Date    = $"ИТОГО ({days.Count} дн.)",
-            CalDay  = totalCal > 0 ? totalCal.ToString("N0") : "",
+            Date    = $"ИТОГО ({dayCount} дн.)",
+            PriceBf = sPrBf > 0 ? $"~{sPrBf:F0}" : "", PriceLn = sPrLn > 0 ? $"~{sPrLn:F0}" : "",
+            PriceSn = sPrSn > 0 ? $"~{sPrSn:F0}" : "", PriceDn = sPrDn > 0 ? $"~{sPrDn:F0}" : "",
+            CalBf = sCalBf > 0 ? sCalBf.ToString("N0") : "", CalLn = sCalLn > 0 ? sCalLn.ToString("N0") : "",
+            CalSn = sCalSn > 0 ? sCalSn.ToString("N0") : "", CalDn = sCalDn > 0 ? sCalDn.ToString("N0") : "",
+            CalDay  = sCalDay > 0 ? sCalDay.ToString("N0") : "",
             CalNorm = normTotal.ToString("N0"),
-            DayCost = $"~{totalCost:F0}",
+            DayCost = sCost > 0 ? $"~{sCost:F0}" : "",
             IsTotal = true,
             CalDayBrush  = MenuBrushes.TotCalDay,
             DayCostBrush = MenuBrushes.TotCost,
@@ -847,23 +836,6 @@ public partial class MainWindow
             return (discrete ? $"{exQty:F0} {exUnit}" : $"{exQty:F2} {exUnit}", cost);
         }
         return (FormatShoppingQty(appProduct, appUnit, snappedAppQty), Math.Round(jsonPrice * snappedAppQty, 2));
-    }
-
-    private long ComputeProductsTotalKcal()
-    {
-        decimal ratio = familyCount / 2m, periodScale = (int)(periodEnd - periodStart).TotalDays + 1 / 30m;
-        decimal comfortTotal = prices.Sum(p => BaseQty.TryGetValue(p.Name, out decimal q) ? p.Price * Math.Round(q * ratio * periodScale, 1) : 0);
-        decimal budgetScale  = comfortTotal > 0 && PeriodBudget < comfortTotal ? PeriodBudget / comfortTotal : 1m;
-        long total = 0;
-        foreach (var p in prices)
-        {
-            if (!BaseQty.TryGetValue(p.Name, out decimal q)) continue;
-            decimal qty = Math.Round(q * ratio * periodScale * budgetScale, 1);
-            if (qty <= 0) continue;
-            if (UnitGrams.TryGetValue(p.Unit, out decimal gPU) && CaloriesPer100g.TryGetValue(p.Name, out decimal cal100))
-                total += (long)Math.Round(qty * gPU * cal100 / 100m);
-        }
-        return total;
     }
 
     private decimal CalcTierBudget(Dictionary<string, decimal> basket)

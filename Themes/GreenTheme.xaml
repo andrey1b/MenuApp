@@ -75,18 +75,25 @@
 
     <!-- ═══════════════ Общие стили таблиц (DataGrid) для миграции на WPF ═══════════════ -->
 
-    <!-- Заголовок колонки: тёмно-зелёный фон, белый жирный текст, по центру -->
+    <!-- Заголовок колонки: тёмно-зелёный фон, белый жирный текст, по центру; перенос длинных подписей -->
     <Style x:Key="GridHeader" TargetType="DataGridColumnHeader">
         <Setter Property="Background"           Value="#2C5F2D"/>
         <Setter Property="Foreground"           Value="White"/>
         <Setter Property="FontWeight"           Value="Bold"/>
         <Setter Property="FontSize"             Value="13"/>
-        <Setter Property="Height"               Value="42"/>
+        <Setter Property="MinHeight"            Value="42"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment"   Value="Center"/>
         <Setter Property="BorderBrush"          Value="#1E3A1E"/>
         <Setter Property="BorderThickness"      Value="0,0,1,0"/>
         <Setter Property="SeparatorBrush"       Value="#1E3A1E"/>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Строка таблицы: чередование (AliceBlue) + особая строка ИТОГО (тёмная, белый жирный) -->
