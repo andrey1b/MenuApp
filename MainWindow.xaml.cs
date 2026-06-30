@@ -86,10 +86,53 @@ public partial class MainWindow : Window
         PopulateShoppingList();   // список продуктов для вкладки «Составить список» (после загрузки prices)
         UpdateBudgetLabel();
         ValidatePeriod();
+        BuildFoodExpenses();      // фактические расходы из «Денег» (read-only)
 
         await InitWebViewAsync();
         _ = UpdateChecker.CheckAsync(OnUpdateChecked);
     }
+
+    // ══════════════════════════════════════════════════ РАСХОДЫ ИЗ «ДЕНЕГ» (read-only)
+
+    // Строка для таблицы расходов (отформатированные поля).
+    private sealed record FoodExpenseRow(string DateText, string Name, string Account, string AmountText);
+
+    private void BuildFoodExpenses()
+    {
+        if (!HomeAccountingReader.IsAvailable)
+        {
+            lblFoodTotal.Text = "Расходы на продукты (из «Денег»)";
+            lblFoodInfo.Text  = "Программа «Деньги» не установлена — фактические расходы недоступны.";
+            dgFoodExpenses.ItemsSource = null;
+            return;
+        }
+
+        var items = HomeAccountingReader.GetFoodExpenses();
+        decimal total = HomeAccountingReader.Total(items);
+
+        lblFoodTotal.Text = $"Потрачено на продукты: {total:N2} грн";
+
+        var rows = items.Select(e =>
+        {
+            string name = !string.IsNullOrWhiteSpace(e.Subcategory) ? e.Subcategory : e.Category;
+            if (!string.IsNullOrWhiteSpace(e.Note)) name += " — " + e.Note;
+            return new FoodExpenseRow(FmtExpenseDate(e.Date), name, e.Account, e.Amount.ToString("N2"));
+        }).ToList();
+
+        dgFoodExpenses.ItemsSource = rows;
+        lblFoodInfo.Text = rows.Count == 0
+            ? "Записей нет. Расходы ведутся в программе «Деньги» (категория «Продукты питания»)."
+            : $"Записей: {rows.Count}. Источник: «Деньги», только чтение.";
+    }
+
+    private void BtnFoodRefresh_Click(object sender, RoutedEventArgs e) => BuildFoodExpenses();
+
+    private void BtnFoodOpenMoney_Click(object sender, RoutedEventArgs e) => HomeAccountingReader.OpenHomeAccounting();
+
+    // Дата из «Денег» хранится как yyyy-MM-dd → показываем dd.MM.yyyy
+    private static string FmtExpenseDate(string iso)
+        => DateTime.TryParse(iso, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)
+           ? dt.ToString("dd.MM.yyyy") : iso;
 
     // ══════════════════════════════════════════════════ КАРТОЧКИ «СЕГОДНЯ»
 

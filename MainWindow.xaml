@@ -606,6 +606,38 @@
                     </Border>
                 </Grid>
             </TabItem>
+            <TabItem Header="  Расходы (Деньги)  ">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#EEF8EE" Padding="10,8">
+                        <DockPanel LastChildFill="True">
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <Button x:Name="btnFoodRefresh" Style="{StaticResource RoundBtn}"
+                                        Content="🔄 Обновить" Background="#DADEF0" Foreground="#28326E"
+                                        Margin="4,0,0,0" Click="BtnFoodRefresh_Click"/>
+                                <Button x:Name="btnFoodOpenMoney" Style="{StaticResource RoundBtn}"
+                                        Content="Открыть «Деньги»" Background="#2C5F2D" Foreground="White"
+                                        Margin="4,0,0,0" Click="BtnFoodOpenMoney_Click"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="lblFoodTotal" FontSize="15" FontWeight="Bold" Foreground="#1E461E"/>
+                                <TextBlock Text="Расходы на продукты ведутся в «Деньгах» (категория «Продукты питания»). Здесь — только просмотр; меню и списки покупок — это план."
+                                           FontSize="11" Foreground="#5A7A5A" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <TextBlock x:Name="lblFoodInfo" DockPanel.Dock="Bottom" Margin="10,4" FontSize="11" Foreground="DimGray"/>
+                    <DataGrid x:Name="dgFoodExpenses" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" CanUserAddRows="False" GridLinesVisibility="Horizontal"
+                              Background="#F5FAF5" RowBackground="White" Margin="6" FontSize="13">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Дата" Binding="{Binding DateText}" Width="110"/>
+                            <DataGridTextColumn Header="Продукт / статья" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Счёт" Binding="{Binding Account}" Width="160"/>
+                            <DataGridTextColumn Header="Сумма, грн" Binding="{Binding AmountText}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
             <TabItem Header="  Вопросы ИИ  ">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Background="#EEF8EE" Padding="10,8">
