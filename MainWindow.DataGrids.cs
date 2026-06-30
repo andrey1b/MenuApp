@@ -331,6 +331,18 @@ public partial class MainWindow
         return scaleToNorm * Math.Min(1m, budgetFactor);
     }
 
+    // Праздничная добавка к ужину выходного дня (режим «весь бюджет на меню»):
+    // деликатес на сумму moneyFamily (на семью). Возвращает (доп. цена на семью, доп. ккал на человека).
+    private (decimal price, int cal) FestiveAddon(decimal moneyFamily)
+    {
+        if (moneyFamily <= 0) return (0, 0);
+        // Красная рыба ~600 грн/кг, ~130 ккал/100 г. Калории на человека ограничиваем (премиум-деликатесы
+        // вроде икры дают мало калорий на гривну) — «праздник желудка», но без переедания.
+        decimal gramsFamily = moneyFamily / 600m * 1000m;
+        int cal = (int)Math.Round(gramsFamily / Math.Max(1, familyCount) * 130m / 100m);
+        return (Math.Floor(moneyFamily), Math.Min(cal, 600));   // floor — не выходим за бюджет
+    }
+
     private void FillMenuTab()
     {
         var rows = new List<MenuRow>();
@@ -350,6 +362,21 @@ public partial class MainWindow
             return Math.Round(c * ps, 0);
         }
 
+        decimal budget = PeriodBudget;
+
+        // Пред-проход: базовая стоимость меню и число выходных дней (для режима «весь бюджет на меню»)
+        decimal baseTotal = 0; int weekendDays = 0;
+        for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
+        {
+            MealDay? m = FindMealForDate(d);
+            if (m == null) continue;
+            baseTotal += SPrice(m.Breakfast) + SPrice(m.Lunch) + SPrice(m.Snack) + SPrice(m.Dinner);
+            if (d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday) weekendDays++;
+        }
+        // Праздничные выходные: остаток бюджета сверх базового меню распределяем поровну по выходным дням
+        bool    festive       = fullBudgetMode && weekendDays > 0 && (budget - baseTotal) > 50m;
+        decimal festPerWeekend = festive ? (budget - baseTotal) / weekendDays : 0m;
+
         // Накопители для строки ИТОГО (суммы по колонкам)
         int sCalBf = 0, sCalLn = 0, sCalSn = 0, sCalDn = 0;
         decimal sPrBf = 0, sPrLn = 0, sPrSn = 0, sPrDn = 0;
@@ -365,18 +392,35 @@ public partial class MainWindow
             int ln = SCal(meal.Lunch);
             int sn = SCal(meal.Snack);
             int dn = SCal(meal.Dinner);
-            int dayCal = bf + ln + sn + dn;
 
             decimal pBf = SPrice(meal.Breakfast);
             decimal pLn = SPrice(meal.Lunch);
             decimal pSn = SPrice(meal.Snack);
             decimal pDn = SPrice(meal.Dinner);
+
+            // Праздничный деликатес к ужину выходного дня
+            string dinnerText = meal.Dinner;
+            bool   feastDay   = festive && (d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday);
+            if (feastDay)
+            {
+                var (fp, fc) = FestiveAddon(festPerWeekend);
+                if (fp > 0)
+                {
+                    pDn += fp; dn += fc;
+                    dinnerText = meal.Dinner + "  ✨ + деликатес (красная рыба/икра)";
+                }
+                else feastDay = false;
+            }
+
+            int dayCal = bf + ln + sn + dn;
             decimal dayCost = pBf + pLn + pSn + pDn;
+            var dnBg    = feastDay ? MenuBrushes.Festive : MenuBrushes.MealBg(meal.Dinner, dn, MenuBrushes.GroupDn);
+            var dnGroup = feastDay ? MenuBrushes.Festive : MenuBrushes.GroupDn;
 
             rows.Add(new MenuRow
             {
                 Date      = d.ToString("d MMMM (ddd)", culture),
-                Breakfast = meal.Breakfast, Lunch = meal.Lunch, Snack = meal.Snack, Dinner = meal.Dinner,
+                Breakfast = meal.Breakfast, Lunch = meal.Lunch, Snack = meal.Snack, Dinner = dinnerText,
                 PriceBf = pBf > 0 ? $"~{pBf:F0}" : "", PriceLn = pLn > 0 ? $"~{pLn:F0}" : "",
                 PriceSn = pSn > 0 ? $"~{pSn:F0}" : "", PriceDn = pDn > 0 ? $"~{pDn:F0}" : "",
                 CalBf = bf > 0 ? bf.ToString() : "", CalLn = ln > 0 ? ln.ToString() : "",
@@ -385,10 +429,12 @@ public partial class MainWindow
                 CalNorm = normPerPerson.ToString(),
                 DayCost = dayCost > 0 ? $"~{dayCost:F0}" : "",
                 CalDayBrush = MenuBrushes.CalDay(dayCal, normPerPerson),
-                BreakfastBg = MenuBrushes.MealBg(meal.Breakfast, bf),
-                LunchBg     = MenuBrushes.MealBg(meal.Lunch,     ln),
-                SnackBg     = MenuBrushes.MealBg(meal.Snack,     sn),
-                DinnerBg    = MenuBrushes.MealBg(meal.Dinner,    dn),
+                BreakfastBg = MenuBrushes.MealBg(meal.Breakfast, bf, MenuBrushes.GroupBf),
+                LunchBg     = MenuBrushes.MealBg(meal.Lunch,     ln, MenuBrushes.GroupLn),
+                SnackBg     = MenuBrushes.MealBg(meal.Snack,     sn, MenuBrushes.GroupSn),
+                DinnerBg    = dnBg,
+                BfGroup = MenuBrushes.GroupBf, LnGroup = MenuBrushes.GroupLn,
+                SnGroup = MenuBrushes.GroupSn, DnGroup = dnGroup,
             });
 
             sCalBf += bf; sCalLn += ln; sCalSn += sn; sCalDn += dn;
@@ -417,13 +463,14 @@ public partial class MainWindow
         dgMenu.ItemsSource = rows;
 
         // ── Сводка: рацион vs бюджет ─────────────────────────────
-        decimal budget = PeriodBudget;
         int avgCal = (int)Math.Round((decimal)sCalDay / dayCount);   // ккал/чел в день (после масштаба)
         if (avgCal >= normPerPerson * 0.98m)
         {
             decimal free = Math.Max(0, budget - sCost);
-            lblMenuBudget.Text = $"  Уровень рациона: {mealTier}.  ✓ Полноценный рацион (~{normPerPerson} ккал/чел в день).  " +
-                $"Стоимость меню на {dayCount} дн.: ~{sCost:N0} грн из бюджета {budget:N0} грн.  Свободный остаток: ~{free:N0} грн.";
+            string tail = festive
+                ? $"Весь бюджет в меню: ~{sCost:N0} грн из {budget:N0} грн — остаток ~{free:N0} грн распределён по выходным (праздничные блюда). ✨"
+                : $"Стоимость меню на {dayCount} дн.: ~{sCost:N0} грн из бюджета {budget:N0} грн.  Свободный остаток: ~{free:N0} грн.";
+            lblMenuBudget.Text = $"  Уровень рациона: {mealTier}.  ✓ Полноценный рацион (~{normPerPerson} ккал/чел в день).  " + tail;
             lblMenuBudget.Foreground = WMedia.Brushes.DarkGreen;
         }
         else
@@ -967,7 +1014,10 @@ public partial class MainWindow
     private decimal EstimatePrice(string ingredient, decimal totalGrams)
     {
         var p = prices.Find(x => x.Name.Equals(ingredient, StringComparison.OrdinalIgnoreCase));
-        return p == null ? 0 : Math.Round(p.Price * totalGrams / 1000m, 1);
+        if (p != null) return Math.Round(p.Price * totalGrams / 1000m, 1);
+        if (FruitPricePerKg.TryGetValue(ingredient, out decimal perKg))
+            return Math.Round(perKg * totalGrams / 1000m, 1);
+        return 0;
     }
 
     private static readonly DateTime PlanStart = new DateTime(2026, 4, 24);
@@ -990,6 +1040,14 @@ public partial class MainWindow
         ["Молоко"]=52,["Сыр"]=350,["Сметана"]=206,["Яйца"]=157,["Масло сливочное"]=717,
         ["Масло подсолнечное"]=884,["Картофель"]=77,["Капуста"]=27,["Лук"]=41,["Морковь"]=41,
         ["Яблоки"]=52,["Чеснок"]=149,["Творог"]=121,["Овсянка"]=352,
+        ["Бананы"]=89,["Груши"]=57,
+    };
+
+    // Цены фруктов-полдников (грн/кг) — fallback, если фрукта нет в загруженном прайсе.
+    // Из розничных цен супермаркетов Украины 2026 (АТБ/Сільпо/Varus): яблоко ~40, банан ~65, груша ~70.
+    private static readonly Dictionary<string, decimal> FruitPricePerKg = new()
+    {
+        ["Яблоки"]=40m,["Бананы"]=65m,["Груши"]=70m,
     };
 
     private static readonly Dictionary<string, decimal> UnitGrams = new()
@@ -1122,6 +1180,10 @@ public partial class MainWindow
         ("сметан",             new[]{("Сметана",50m)}),
         ("сыр",                new[]{("Сыр",50m)}),
         ("хлеб",               new[]{("Хлеб",100m)}),
+        // Фрукты-полдники (1 шт на человека): средний вес плода
+        ("яблоко",             new[]{("Яблоки",180m)}),
+        ("банан",              new[]{("Бананы",120m)}),
+        ("груша",              new[]{("Груши",180m)}),
     };
 
     private static IEnumerable<(string name, decimal grams)> GetIngredients(string mealText)
@@ -1147,6 +1209,7 @@ public partial class MainWindow
             monthlyBudget = doc.RootElement.GetProperty("Budget").GetDecimal();
             familyCount   = doc.RootElement.GetProperty("FamilyCount").GetInt32();
             if (doc.RootElement.TryGetProperty("CalorieNorm", out var cn)) calorieNorm = cn.GetInt32();
+            if (doc.RootElement.TryGetProperty("FullBudgetMode", out var fb)) fullBudgetMode = fb.GetBoolean();
         }
         catch { }
     }
@@ -1154,7 +1217,7 @@ public partial class MainWindow
     internal void SaveSettings()
     {
         string path = Path.Combine(AppDir, "settings.json");
-        var obj = new { Budget = monthlyBudget, FamilyCount = familyCount, CalorieNorm = calorieNorm };
+        var obj = new { Budget = monthlyBudget, FamilyCount = familyCount, CalorieNorm = calorieNorm, FullBudgetMode = fullBudgetMode };
         File.WriteAllText(path, JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true }));
     }
 

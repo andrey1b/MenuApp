@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     private decimal monthlyBudget = 10000;
     private int familyCount  = 2;
     private int calorieNorm  = 2000;
+    // Режим остатка бюджета: false (по умолчанию) — остаток пользователю; true — весь бюджет на меню (праздничные выходные)
+    private bool fullBudgetMode = false;
 
     private DateTime periodStart;
     private DateTime periodEnd;
@@ -437,11 +439,12 @@ public partial class MainWindow : Window
 
     private void BtnSettings_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new SettingsWindow(monthlyBudget, familyCount, calorieNorm) { Owner = this };
+        var dlg = new SettingsWindow(monthlyBudget, familyCount, calorieNorm, fullBudgetMode) { Owner = this };
         if (dlg.ShowDialog() != true) return;
-        monthlyBudget = dlg.BudgetValue;
-        familyCount   = dlg.FamilyCount;
-        calorieNorm   = dlg.CalorieNorm;
+        monthlyBudget  = dlg.BudgetValue;
+        familyCount    = dlg.FamilyCount;
+        calorieNorm    = dlg.CalorieNorm;
+        fullBudgetMode = dlg.FullBudget;
         UpdateBudgetLabel();
         SelectMealPlan();
         FillMenuTab();

@@ -28,11 +28,17 @@ internal sealed class MenuRow
     public string CalNorm   { get; init; } = "";
     public string DayCost   { get; init; } = "";
 
-    // Фон ячеек блюд: подсветка «блюдо без данных о калориях»
+    // Фон ячеек блюд: групповой тон приёма пищи (или коралловый — «блюдо без данных»)
     public Brush BreakfastBg { get; init; } = Brushes.Transparent;
     public Brush LunchBg     { get; init; } = Brushes.Transparent;
     public Brush SnackBg     { get; init; } = Brushes.Transparent;
     public Brush DinnerBg    { get; init; } = Brushes.Transparent;
+
+    // Фон ячеек «Цена»/«Ккал» каждого приёма — тот же групповой тон (на строке ИТОГО прозрачный)
+    public Brush BfGroup { get; init; } = Brushes.Transparent;
+    public Brush LnGroup { get; init; } = Brushes.Transparent;
+    public Brush SnGroup { get; init; } = Brushes.Transparent;
+    public Brush DnGroup { get; init; } = Brushes.Transparent;
 
     // Цвет текста числовых колонок
     public Brush CalDayBrush  { get; init; } = Brushes.Black;
@@ -45,11 +51,18 @@ internal sealed class MenuRow
 
 internal static class MenuBrushes
 {
-    public static readonly Brush Unknown   = Frozen(255, 243, 205);  // подсветка неизвестного блюда
+    public static readonly Brush Unknown   = Frozen(255, 214, 196);  // подсветка блюда без данных (коралловый)
     public static readonly Brush NormGreen = Frozen( 44,  95,  45);  // «Норма ккал»
     public static readonly Brush TotCalDay = Frozen(150, 220, 150);  // ИТОГО: ккал/день
     public static readonly Brush TotCost   = Frozen(130, 230, 130);  // ИТОГО: стоимость
     public static readonly Brush TotNorm   = Frozen(140, 190, 255);  // ИТОГО: норма
+
+    // Групповые тона приёмов пищи — объединяют тройку колонок «Блюдо | Цена | Ккал»
+    public static readonly Brush GroupBf = Frozen(255, 251, 240);  // Завтрак — тёплый кремовый
+    public static readonly Brush GroupLn = Frozen(240, 248, 240);  // Обед — светло-зелёный
+    public static readonly Brush GroupSn = Frozen(255, 247, 214);  // Полдник — светло-жёлтый (узнаваемый)
+    public static readonly Brush GroupDn = Frozen(240, 246, 252);  // Ужин — светло-голубой
+    public static readonly Brush Festive = Frozen(255, 232, 150);  // Праздничный ужин выходного дня (золотистый)
 
     // Цвет «ккал/день»: зелёный ≥ нормы, оранжевый ≥ 1500, иначе красный
     public static Brush CalDay(int dayCal, int norm) =>
@@ -58,9 +71,10 @@ internal static class MenuBrushes
         : dayCal >= 1500 ? Brushes.DarkOrange
                          : Brushes.Crimson;
 
-    // Фон ячейки блюда: жёлтый, если блюдо указано, но калории неизвестны (cal == 0)
-    public static Brush MealBg(string text, int cal) =>
-        (!string.IsNullOrWhiteSpace(text) && cal == 0) ? Unknown : Brushes.Transparent;
+    // Фон ячейки блюда: коралловый, если блюдо указано, но калории неизвестны (cal == 0);
+    // иначе — групповой тон приёма пищи.
+    public static Brush MealBg(string text, int cal, Brush group) =>
+        (!string.IsNullOrWhiteSpace(text) && cal == 0) ? Unknown : group;
 
     private static Brush Frozen(byte r, byte g, byte b)
     {

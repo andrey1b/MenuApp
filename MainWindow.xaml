@@ -121,7 +121,7 @@
                         </Style>
                     </DataGrid.Resources>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="День" Binding="{Binding Date}" Width="150">
+                        <DataGridTextColumn Header="День" Binding="{Binding Date}" Width="108">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -130,44 +130,97 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <DataGridTextColumn Header="Завтрак" Binding="{Binding Breakfast}" Width="165" ElementStyle="{StaticResource MealText}">
+                        <!-- ── Завтрак: Блюдо | Цена | Ккал ── -->
+                        <DataGridTextColumn Header="Завтрак" Binding="{Binding Breakfast}" Width="150" ElementStyle="{StaticResource MealText}">
                             <DataGridTextColumn.CellStyle>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="Background" Value="{Binding BreakfastBg}"/>
                                 </Style>
                             </DataGridTextColumn.CellStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Обед" Binding="{Binding Lunch}" Width="175" ElementStyle="{StaticResource MealText}">
+                        <DataGridTextColumn Header="Цена" Binding="{Binding PriceBf}" Width="70" ElementStyle="{StaticResource PriceText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding BfGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Ккал" Binding="{Binding CalBf}" Width="70" ElementStyle="{StaticResource CalText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding BfGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+
+                        <!-- ── Обед: Блюдо | Цена | Ккал ── -->
+                        <DataGridTextColumn Header="Обед" Binding="{Binding Lunch}" Width="160" ElementStyle="{StaticResource MealText}">
                             <DataGridTextColumn.CellStyle>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="Background" Value="{Binding LunchBg}"/>
                                 </Style>
                             </DataGridTextColumn.CellStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Полдник" Binding="{Binding Snack}" Width="120" ElementStyle="{StaticResource MealText}">
+                        <DataGridTextColumn Header="Цена" Binding="{Binding PriceLn}" Width="70" ElementStyle="{StaticResource PriceText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding LnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Ккал" Binding="{Binding CalLn}" Width="70" ElementStyle="{StaticResource CalText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding LnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+
+                        <!-- ── Полдник: Блюдо | Цена | Ккал ── -->
+                        <DataGridTextColumn Header="Полдник" Binding="{Binding Snack}" Width="110" ElementStyle="{StaticResource MealText}">
                             <DataGridTextColumn.CellStyle>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="Background" Value="{Binding SnackBg}"/>
                                 </Style>
                             </DataGridTextColumn.CellStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Ужин" Binding="{Binding Dinner}" Width="165" ElementStyle="{StaticResource MealText}">
+                        <DataGridTextColumn Header="Цена" Binding="{Binding PriceSn}" Width="70" ElementStyle="{StaticResource PriceText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding SnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Ккал" Binding="{Binding CalSn}" Width="70" ElementStyle="{StaticResource CalText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding SnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+
+                        <!-- ── Ужин: Блюдо | Цена | Ккал ── -->
+                        <DataGridTextColumn Header="Ужин" Binding="{Binding Dinner}" Width="150" ElementStyle="{StaticResource MealText}">
                             <DataGridTextColumn.CellStyle>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="Background" Value="{Binding DinnerBg}"/>
                                 </Style>
                             </DataGridTextColumn.CellStyle>
                         </DataGridTextColumn>
-
-                        <DataGridTextColumn Header="Цена завтрак" Binding="{Binding PriceBf}" Width="100" ElementStyle="{StaticResource PriceText}"/>
-                        <DataGridTextColumn Header="Цена обед"    Binding="{Binding PriceLn}" Width="92"  ElementStyle="{StaticResource PriceText}"/>
-                        <DataGridTextColumn Header="Цена полдник" Binding="{Binding PriceSn}" Width="100" ElementStyle="{StaticResource PriceText}"/>
-                        <DataGridTextColumn Header="Цена ужин"    Binding="{Binding PriceDn}" Width="92"  ElementStyle="{StaticResource PriceText}"/>
-
-                        <DataGridTextColumn Header="Ккал завтрак" Binding="{Binding CalBf}" Width="96" ElementStyle="{StaticResource CalText}"/>
-                        <DataGridTextColumn Header="Ккал обед"    Binding="{Binding CalLn}" Width="84" ElementStyle="{StaticResource CalText}"/>
-                        <DataGridTextColumn Header="Ккал полдник" Binding="{Binding CalSn}" Width="96" ElementStyle="{StaticResource CalText}"/>
-                        <DataGridTextColumn Header="Ккал ужин"    Binding="{Binding CalDn}" Width="84" ElementStyle="{StaticResource CalText}"/>
+                        <DataGridTextColumn Header="Цена" Binding="{Binding PriceDn}" Width="70" ElementStyle="{StaticResource PriceText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding DnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Ккал" Binding="{Binding CalDn}" Width="70" ElementStyle="{StaticResource CalText}">
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                    <Setter Property="Background" Value="{Binding DnGroup}"/>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
 
                         <DataGridTextColumn Header="Ккал/день" Binding="{Binding CalDay}" Width="86">
                             <DataGridTextColumn.ElementStyle>
