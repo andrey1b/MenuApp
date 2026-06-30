@@ -1,7 +1,7 @@
 #define AppName    "Меню питания семьи"
-#define AppVersion "2.3.1"
+#define AppVersion "2.3.2"
 #define AppExeName "MenuApp.exe"
-#define AppSourceDir "..\..\Дистрибутив v2.3.1\app"
+#define AppSourceDir "..\..\Дистрибутив v2.3.2\app"
 #define OutputDir  "..\..\setup_output"
 
 [Setup]
