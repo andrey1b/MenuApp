@@ -45,6 +45,10 @@ internal sealed class MenuRow
     public Brush CalNormBrush { get; init; } = MenuBrushes.NormGreen;
     public Brush DayCostBrush { get; init; } = Brushes.DarkGreen;
 
+    // Подсветка сегодняшнего дня (колонка «День»)
+    public bool  IsToday { get; init; }
+    public Brush DateBg  { get; init; } = Brushes.Transparent;
+
     // Строка ИТОГО — стилизуется через GridRow (тёмный фон, белый жирный)
     public bool IsTotal { get; init; }
 }
@@ -63,6 +67,7 @@ internal static class MenuBrushes
     public static readonly Brush GroupSn = Frozen(255, 247, 214);  // Полдник — светло-жёлтый (узнаваемый)
     public static readonly Brush GroupDn = Frozen(240, 246, 252);  // Ужин — светло-голубой
     public static readonly Brush Festive = Frozen(255, 232, 150);  // Праздничный ужин выходного дня (золотистый)
+    public static readonly Brush Today   = Frozen(198, 232, 198);  // Сегодняшний день (мягкий зелёный акцент)
 
     // Цвет «ккал/день»: зелёный ≥ нормы, оранжевый ≥ 1500, иначе красный
     public static Brush CalDay(int dayCal, int norm) =>

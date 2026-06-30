@@ -206,11 +206,11 @@ public partial class MainWindow
         new("", "Яйца варёные + хлеб с маслом",   "Рис с курицей",    "1 яблоко", "Тефтели + рис"),
     };
 
-    // Стоимость полноценного рациона варианта (порции доведены до нормы калорий), на семью за период
+    // Стоимость полноценного рациона варианта (каждый день доведён до нормы калорий), на семью за период
     private decimal VariantRationCost(List<MealDay> plan)
     {
         if (plan.Count == 0) return decimal.MaxValue;
-        long baseCal = 0; decimal baseCost = 0; int days = 0;
+        decimal rationCost = 0; int days = 0;
         int cycleLen = Math.Min(plan.Count, 7);
         for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
         {
@@ -218,16 +218,15 @@ public partial class MainWindow
             int idx = ((totalDays % cycleLen) + cycleLen) % cycleLen;
             var meal = plan[idx];
             days++;
+            int baseCal = DayBaseCalories(meal);
+            if (baseCal <= 0) continue;
+            decimal dayCost = 0;
             foreach (string t in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
-            {
-                baseCal += CalcMealCalories(t);
                 foreach (var (name, grams) in GetIngredients(t))
-                    baseCost += EstimatePrice(name, grams * familyCount);
-            }
+                    dayCost += EstimatePrice(name, grams * familyCount);
+            rationCost += dayCost * calorieNorm / baseCal;     // довести день до нормы
         }
-        if (days == 0 || baseCal == 0) return decimal.MaxValue;
-        decimal scaleToNorm = (decimal)calorieNorm * days / baseCal;
-        return baseCost * scaleToNorm;
+        return days == 0 ? decimal.MaxValue : rationCost;
     }
 
     // Выбрать самый «богатый» вариант, чей полноценный рацион укладывается в бюджет (иначе Эконом)
@@ -278,12 +277,18 @@ public partial class MainWindow
         string[] meals = meal != null ? new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner } : new[] { "", "", "", "" };
 
         int totalCal = 0; decimal totalCost = 0;
-        decimal ps = MenuPortionScale();   // тот же масштаб порций, что и на вкладке «Меню»
+        decimal ps = meal != null ? DayScale(meal, BudgetFactor()) : 1m;   // масштаб порций сегодняшнего дня
+
+        // Праздничный деликатес к ужину, если сегодня выходной и включён режим «весь бюджет на меню»
+        bool feastToday = meal != null && (today.DayOfWeek == DayOfWeek.Saturday || today.DayOfWeek == DayOfWeek.Sunday);
+        var (festPrice, festCal) = feastToday ? FestiveAddon(FestivePerWeekend()) : (0m, 0);
 
         for (int i = 0; i < 4; i++)
         {
             string text = meals[i];
-            _txMeal[i].Text = string.IsNullOrEmpty(text) ? "—" : text;
+            bool   feastDinner = i == 3 && festPrice > 0 && !string.IsNullOrEmpty(text);
+            _txMeal[i].Text = string.IsNullOrEmpty(text) ? "—"
+                            : feastDinner ? text + "  ✨ + деликатес (красная рыба/икра)" : text;
             if (!string.IsNullOrEmpty(text))
             {
                 int cal = (int)Math.Round(CalcMealCalories(text) * ps);
@@ -291,6 +296,7 @@ public partial class MainWindow
                 foreach (var (name, grams) in GetIngredients(text))
                     cost += EstimatePrice(name, grams * familyCount);
                 cost = Math.Round(cost * ps, 0);
+                if (feastDinner) { cal += festCal; cost += festPrice; }
                 _txCal[i].Text  = cal  > 0 ? $"{cal} кКал"    : "";
                 _txCost[i].Text = cost > 0 ? $"~{cost:F0} грн" : "";
                 totalCal += cal; totalCost += cost;
@@ -306,29 +312,38 @@ public partial class MainWindow
             : $"{dateStr}  |  вне плана";
     }
 
-    // Масштаб порций меню под бюджет: довести рацион до нормы калорий, но не дороже бюджета.
-    // Бюджета хватает → полноценный рацион (норма); не хватает → урезаем порции под бюджет.
-    private decimal MenuPortionScale()
+    // Калории одного дня (на человека) по плану
+    private int DayBaseCalories(MealDay meal) =>
+        CalcMealCalories(meal.Breakfast) + CalcMealCalories(meal.Lunch)
+        + CalcMealCalories(meal.Snack)   + CalcMealCalories(meal.Dinner);
+
+    // Глобальный бюджетный фактор: 1, если бюджета хватает на полноценный рацион (норма КАЖДЫЙ день),
+    // иначе < 1 — равномерно урезает порции под бюджет. Рацион считается с подневным доведением до нормы.
+    private decimal BudgetFactor()
     {
-        long baseCal = 0; decimal baseCost = 0; int dayCount = 0;
+        decimal rationCost = 0;
         for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
         {
             MealDay? meal = FindMealForDate(d);
             if (meal == null) continue;
-            dayCount++;
+            int baseCal = DayBaseCalories(meal);
+            if (baseCal <= 0) continue;
+            decimal dayCost = 0;
             foreach (string t in new[] { meal.Breakfast, meal.Lunch, meal.Snack, meal.Dinner })
-            {
-                baseCal += CalcMealCalories(t);                       // на человека
                 foreach (var (name, grams) in GetIngredients(t))
-                    baseCost += EstimatePrice(name, grams * familyCount);  // на семью
-            }
+                    dayCost += EstimatePrice(name, grams * familyCount);     // на семью
+            rationCost += dayCost * calorieNorm / baseCal;                   // довести день до нормы калорий
         }
-        if (dayCount == 0 || baseCal == 0) return 1m;
+        if (rationCost <= 0) return 1m;
+        return Math.Min(1m, PeriodBudget / rationCost);
+    }
 
-        decimal scaleToNorm  = (decimal)calorieNorm * dayCount / baseCal;  // довести калории до нормы
-        decimal rationCost   = baseCost * scaleToNorm;                     // стоимость полноценного рациона
-        decimal budgetFactor = rationCost > 0 ? PeriodBudget / rationCost : 1m;
-        return scaleToNorm * Math.Min(1m, budgetFactor);
+    // Масштаб порций КОНКРЕТНОГО дня: довести этот день до нормы калорий, затем урезать общим бюджетным фактором.
+    // Так калории каждого дня выходят ровными (≈ норма × budgetFactor), а не скачут по плану.
+    private decimal DayScale(MealDay meal, decimal budgetFactor)
+    {
+        int baseCal = DayBaseCalories(meal);
+        return baseCal > 0 ? (decimal)calorieNorm / baseCal * budgetFactor : budgetFactor;
     }
 
     // Праздничная добавка к ужину выходного дня (режим «весь бюджет на меню»):
@@ -343,6 +358,30 @@ public partial class MainWindow
         return (Math.Floor(moneyFamily), Math.Min(cal, 600));   // floor — не выходим за бюджет
     }
 
+    // Сумма на праздничный деликатес на ОДИН выходной день (режим «весь бюджет на меню»).
+    // 0 — если режим выключен, нет выходных в периоде или нет остатка сверх базового меню.
+    private decimal FestivePerWeekend()
+    {
+        if (!fullBudgetMode) return 0m;
+        decimal budgetF = BudgetFactor();
+        decimal baseTotal = 0; int weekendDays = 0;
+        for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
+        {
+            MealDay? m = FindMealForDate(d);
+            if (m == null) continue;
+            decimal psd = DayScale(m, budgetF);
+            foreach (string t in new[] { m.Breakfast, m.Lunch, m.Snack, m.Dinner })
+            {
+                decimal c = 0;
+                foreach (var (name, grams) in GetIngredients(t)) c += EstimatePrice(name, grams * familyCount);
+                baseTotal += Math.Round(c * psd, 0);
+            }
+            if (d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday) weekendDays++;
+        }
+        if (weekendDays == 0 || (PeriodBudget - baseTotal) <= 50m) return 0m;
+        return (PeriodBudget - baseTotal) / weekendDays;
+    }
+
     private void FillMenuTab()
     {
         var rows = new List<MenuRow>();
@@ -350,32 +389,24 @@ public partial class MainWindow
 
         int normPerPerson = calorieNorm;
         var culture = new CultureInfo("ru-RU");
-        decimal ps = MenuPortionScale();   // масштаб порций под бюджет/норму
+        decimal budgetF = BudgetFactor();   // общий бюджетный фактор (≤1); подневной масштаб = норма/калории_дня × budgetF
 
-        // Калории/цена приёма пищи с учётом масштаба (калории — на человека, цена — на семью)
-        int     SCal(string m)   => (int)Math.Round(CalcMealCalories(m) * ps);
-        decimal SPrice(string m)
+        // Калории/цена приёма пищи с учётом подневного масштаба (калории — на человека, цена — на семью)
+        int     SCal(string m, decimal scale)   => (int)Math.Round(CalcMealCalories(m) * scale);
+        decimal SPrice(string m, decimal scale)
         {
             decimal c = 0;
             foreach (var (name, grams) in GetIngredients(m))
                 c += EstimatePrice(name, grams * familyCount);
-            return Math.Round(c * ps, 0);
+            return Math.Round(c * scale, 0);
         }
 
         decimal budget = PeriodBudget;
+        DateTime today = DateTime.Today;
 
-        // Пред-проход: базовая стоимость меню и число выходных дней (для режима «весь бюджет на меню»)
-        decimal baseTotal = 0; int weekendDays = 0;
-        for (DateTime d = periodStart; d <= periodEnd; d = d.AddDays(1))
-        {
-            MealDay? m = FindMealForDate(d);
-            if (m == null) continue;
-            baseTotal += SPrice(m.Breakfast) + SPrice(m.Lunch) + SPrice(m.Snack) + SPrice(m.Dinner);
-            if (d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday) weekendDays++;
-        }
-        // Праздничные выходные: остаток бюджета сверх базового меню распределяем поровну по выходным дням
-        bool    festive       = fullBudgetMode && weekendDays > 0 && (budget - baseTotal) > 50m;
-        decimal festPerWeekend = festive ? (budget - baseTotal) / weekendDays : 0m;
+        // Праздничные выходные: остаток бюджета сверх базового меню распределяется поровну по выходным дням
+        decimal festPerWeekend = FestivePerWeekend();
+        bool    festive        = festPerWeekend > 0m;
 
         // Накопители для строки ИТОГО (суммы по колонкам)
         int sCalBf = 0, sCalLn = 0, sCalSn = 0, sCalDn = 0;
@@ -387,16 +418,17 @@ public partial class MainWindow
             MealDay? meal = FindMealForDate(d);
             if (meal == null) continue;
             dayCount++;
+            decimal ps = DayScale(meal, budgetF);   // подневной масштаб: этот день доведён до нормы калорий
 
-            int bf = SCal(meal.Breakfast);
-            int ln = SCal(meal.Lunch);
-            int sn = SCal(meal.Snack);
-            int dn = SCal(meal.Dinner);
+            int bf = SCal(meal.Breakfast, ps);
+            int ln = SCal(meal.Lunch, ps);
+            int sn = SCal(meal.Snack, ps);
+            int dn = SCal(meal.Dinner, ps);
 
-            decimal pBf = SPrice(meal.Breakfast);
-            decimal pLn = SPrice(meal.Lunch);
-            decimal pSn = SPrice(meal.Snack);
-            decimal pDn = SPrice(meal.Dinner);
+            decimal pBf = SPrice(meal.Breakfast, ps);
+            decimal pLn = SPrice(meal.Lunch, ps);
+            decimal pSn = SPrice(meal.Snack, ps);
+            decimal pDn = SPrice(meal.Dinner, ps);
 
             // Праздничный деликатес к ужину выходного дня
             string dinnerText = meal.Dinner;
@@ -416,10 +448,13 @@ public partial class MainWindow
             decimal dayCost = pBf + pLn + pSn + pDn;
             var dnBg    = feastDay ? MenuBrushes.Festive : MenuBrushes.MealBg(meal.Dinner, dn, MenuBrushes.GroupDn);
             var dnGroup = feastDay ? MenuBrushes.Festive : MenuBrushes.GroupDn;
+            bool isToday = d.Date == today;
 
             rows.Add(new MenuRow
             {
-                Date      = d.ToString("d MMMM (ddd)", culture),
+                Date      = (isToday ? "▶ " : "") + d.ToString("d MMMM (ddd)", culture),
+                IsToday   = isToday,
+                DateBg    = isToday ? MenuBrushes.Today : WMedia.Brushes.Transparent,
                 Breakfast = meal.Breakfast, Lunch = meal.Lunch, Snack = meal.Snack, Dinner = dinnerText,
                 PriceBf = pBf > 0 ? $"~{pBf:F0}" : "", PriceLn = pLn > 0 ? $"~{pLn:F0}" : "",
                 PriceSn = pSn > 0 ? $"~{pSn:F0}" : "", PriceDn = pDn > 0 ? $"~{pDn:F0}" : "",
